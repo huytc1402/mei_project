@@ -150,6 +150,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
           table: 'reactions',
         },
         (payload: { new: any }) => {
+          console.log('🆕 Admin: New reaction received via realtime:', payload.new);
           const reaction = payload.new as any;
           setRealtimeData((prev: typeof realtimeData) => ({
             ...prev,
@@ -172,6 +173,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
           table: 'messages',
         },
         (payload: { new: any }) => {
+          console.log('💬 Admin: New message received via realtime:', payload.new);
           const message = payload.new as any;
           setRealtimeData((prev: typeof realtimeData) => ({
             ...prev,
@@ -196,9 +198,11 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
           table: 'memories',
         },
         (payload: { new: any }) => {
+          console.log('✨ Admin: New memory received via realtime:', payload.new);
           const memory = payload.new as any;
           // Only show notification if it's from client
           if (memory.sender_role === 'client') {
+            console.log('📢 Admin: Client memory detected, showing notification');
             setRealtimeData((prev: typeof realtimeData) => ({
               ...prev,
               memories: [{
@@ -211,6 +215,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
             // Show notification
             showClientMemoryNotification();
           } else {
+            console.log('📝 Admin: Admin memory (no notification)');
             // Also add admin memories to the list (but don't show notification)
           setRealtimeData((prev: typeof realtimeData) => ({
             ...prev,
@@ -224,7 +229,18 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Admin realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Admin: Successfully subscribed to realtime updates (reactions, messages, memories)');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Admin: Realtime channel error - check Supabase realtime configuration');
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏰ Admin: Realtime subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.warn('🔒 Admin: Realtime channel closed');
+        }
+      });
 
     channelRef.current = channel;
 

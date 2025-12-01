@@ -223,6 +223,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           filter: `user_id=eq.${userId}`,
         },
         (payload: { new: any }) => {
+          console.log('📨 Client: New daily notification received via realtime:', payload.new);
           const notification = payload.new as any;
           setCurrentMessage({
             id: notification.id,
@@ -242,13 +243,17 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           filter: `user_id=eq.${userId}`,
         },
         (payload: { new: any }) => {
+          console.log('✨ Client: New memory received via realtime:', payload.new);
           const memory = payload.new as any;
           // Check if it's from admin
           if (memory.sender_role === 'admin' && memory.user_id === userId) {
+            console.log('📢 Client: Admin memory detected, showing notification');
             // Show notification to client
             showAdminMemoryNotificationRef.current?.();
             // Update admin memory count
             loadAdminMemoryCountRef.current?.();
+          } else {
+            console.log('📝 Client: Memory is not from admin or not for this user');
           }
         }
       )
@@ -261,15 +266,28 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           filter: `user_id=eq.${userId}`,
         },
         (payload: { new: any, old: any }) => {
+          console.log('🔄 Client: Device updated via realtime:', payload.new);
           const device = payload.new as any;
           const oldDevice = payload.old as any;
           // Check if device was just approved (is_active changed from false to true)
           if (oldDevice && oldDevice.is_active === false && device.is_active === true) {
+            console.log('✅ Client: Device approved, showing notification');
             showDeviceApprovalNotificationRef.current?.();
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Client realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Client: Successfully subscribed to realtime updates (notifications, memories, devices)');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Client: Realtime channel error - check Supabase realtime configuration');
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⏰ Client: Realtime subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.warn('🔒 Client: Realtime channel closed');
+        }
+      });
 
     channelRef.current = channel;
 

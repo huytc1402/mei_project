@@ -15,20 +15,32 @@ export function NotificationScheduler() {
   }, []);
 
   async function loadSchedules() {
-    const { data } = await supabase
-      .from('notification_schedules')
-      .select('*')
-      .order('time', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('notification_schedules')
+        .select('*')
+        .order('time', { ascending: true });
 
-    // Map snake_case to camelCase
-    const mappedData = (data || []).map((item: any) => ({
-      id: item.id,
-      time: item.time,
-      isActive: item.is_active,
-      createdAt: item.created_at,
-    }));
+      if (error) {
+        console.error('Error loading schedules:', error);
+        alert('Lỗi khi tải lịch: ' + error.message);
+        return;
+      }
 
-    setSchedules(mappedData);
+      // Map snake_case to camelCase
+      const mappedData = (data || []).map((item: any) => ({
+        id: item.id,
+        time: item.time,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+      }));
+
+      console.log(`Loaded ${mappedData.length} notification schedules`);
+      setSchedules(mappedData);
+    } catch (error: any) {
+      console.error('Load schedules error:', error);
+      alert('Có lỗi xảy ra khi tải lịch: ' + (error.message || 'Unknown error'));
+    }
   }
 
   async function addSchedule() {
@@ -39,21 +51,33 @@ export function NotificationScheduler() {
       return;
     }
 
+    if (!time || time.length === 0) {
+      alert('Vui lòng chọn giờ.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const { error } = await supabase
+      console.log('Adding notification schedule:', time);
+      const { data, error } = await supabase
         .from('notification_schedules')
         .insert({
           time,
           is_active: true,
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Add schedule error:', error);
+        throw error;
+      }
+
+      console.log('Schedule added successfully:', data);
       await loadSchedules();
       setTime('08:00');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Add schedule error:', error);
-      alert('Có lỗi xảy ra khi thêm lịch. Vui lòng thử lại.');
+      alert('Có lỗi xảy ra khi thêm lịch: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
