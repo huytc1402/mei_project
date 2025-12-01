@@ -43,7 +43,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
         .limit(10),
       supabase
         .from('memories')
-        .select('id, user_id, created_at') // Select only needed fields
+        .select('id, user_id, sender_role, created_at') // Select only needed fields including sender_role
         .order('created_at', { ascending: false })
         .limit(10),
     ]);
@@ -71,6 +71,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
       memories: memories.map((m: any) => ({
         id: m.id,
         userId: m.user_id,
+        senderRole: m.sender_role || 'client', // Default to client if not set
         createdAt: m.created_at,
       })),
     });
@@ -203,11 +204,23 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
               memories: [{
                 id: memory.id,
                 userId: memory.user_id,
+                senderRole: memory.sender_role || 'client',
                 createdAt: memory.created_at,
               }, ...prev.memories].slice(0, 20),
             }));
             // Show notification
             showClientMemoryNotification();
+          } else {
+            // Also add admin memories to the list (but don't show notification)
+            setRealtimeData((prev: typeof realtimeData) => ({
+              ...prev,
+              memories: [{
+                id: memory.id,
+                userId: memory.user_id,
+                senderRole: memory.sender_role || 'admin',
+                createdAt: memory.created_at,
+              }, ...prev.memories].slice(0, 20),
+            }));
           }
         }
       )

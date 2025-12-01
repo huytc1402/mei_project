@@ -53,6 +53,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
   const [loadingSuggestion, setLoadingSuggestion] = useState<string | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [hasGeneratedSuggestions, setHasGeneratedSuggestions] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const emojiIdCounter = useRef(0);
   const popupTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -182,17 +183,24 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
 
   const handleSendText = useCallback(async (content?: string) => {
     const messageContent = content || text.trim();
-    if (messageContent) {
-      await onMessage(messageContent);
-      setText('');
-      // Clear suggestions after sending
-      setSuggestions([]);
-      setHasGeneratedSuggestions(false);
-      setLoadingSuggestions(false);
-      // Show success popup
-      setShowSuccessPopup(true);
+    if (messageContent && !sendingMessage) {
+      setSendingMessage(true);
+      try {
+        await onMessage(messageContent);
+        setText('');
+        // Clear suggestions after sending
+        setSuggestions([]);
+        setHasGeneratedSuggestions(false);
+        setLoadingSuggestions(false);
+        // Show success popup
+        setShowSuccessPopup(true);
+      } catch (error) {
+        console.error('Error sending message:', error);
+      } finally {
+        setSendingMessage(false);
+      }
     }
-  }, [text, onMessage]);
+  }, [text, onMessage, sendingMessage]);
 
   const handleSuggestionClick = useCallback(async (suggestion: string) => {
     if (loadingSuggestion) return; // Prevent double click
@@ -272,10 +280,17 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
                 />
                 <button
                   onClick={() => handleSendText()}
-                  disabled={!text.trim() || !!loadingSuggestion}
-                  className="px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-romantic-glow to-romantic-accent rounded-lg sm:rounded-xl text-white text-xs sm:text-sm font-medium hover:shadow-lg hover:shadow-romantic-glow/50 transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!text.trim() || !!loadingSuggestion || sendingMessage}
+                  className="px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-romantic-glow to-romantic-accent rounded-lg sm:rounded-xl text-white text-xs sm:text-sm font-medium hover:shadow-lg hover:shadow-romantic-glow/50 transition-shadow disabled:opacity-50 disabled:cursor-not-allowed relative"
                 >
-                  Gửi
+                  {sendingMessage ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="animate-spin">⏳</span>
+                      <span>Đang gửi...</span>
+                    </span>
+                  ) : (
+                    'Gửi'
+                  )}
                 </button>
               </div>
               

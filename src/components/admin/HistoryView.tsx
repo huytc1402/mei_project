@@ -298,7 +298,12 @@ export function HistoryView({ data }: HistoryViewProps) {
                       <div className="flex items-center space-x-3">
                         <span className="text-3xl flex-shrink-0">{(item as Reaction & { itemType: 'reaction' }).emoji}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm">Phản hồi emoji</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-white text-sm">Phản hồi emoji</p>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50">
+                              💕 Client
+                            </span>
+                          </div>
                           <p className="text-romantic-glow/60 text-xs">
                             {formatDate(item.createdAt)}
                           </p>
@@ -307,14 +312,32 @@ export function HistoryView({ data }: HistoryViewProps) {
                     )}
 
                     {item.itemType === 'message' && (
-                      <MessageItem message={(item as Message & { itemType: 'message' }).content} createdAt={item.createdAt} />
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50">
+                            💕 Client
+                          </span>
+                        </div>
+                        <MessageItem message={(item as Message & { itemType: 'message' }).content} createdAt={item.createdAt} />
+                      </div>
                     )}
 
                     {item.itemType === 'memory' && (
                       <div className="flex items-center space-x-3">
                         <span className="text-3xl">✨</span>
                         <div className="flex-1">
-                          <p className="text-white text-sm">Đã nhấn Nhớ</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-white text-sm">Đã nhấn Nhớ</p>
+                            {(item as Memory & { itemType: 'memory' }).senderRole && (
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                (item as Memory & { itemType: 'memory' }).senderRole === 'admin'
+                                  ? 'bg-romantic-glow/30 text-romantic-glow border border-romantic-glow/50'
+                                  : 'bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50'
+                              }`}>
+                                {(item as Memory & { itemType: 'memory' }).senderRole === 'admin' ? '👤 Admin' : '💕 Client'}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-romantic-glow/60 text-xs">
                             {formatDate(item.createdAt)}
                           </p>

@@ -175,6 +175,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           .select('id') // Select only id
           .single(),
         // Send notification to admin - fire and forget
+        // Only use /api/client/send-memory to avoid duplicate telegram notifications
         fetch('/api/client/send-memory', {
           method: 'POST',
           headers: {
@@ -182,18 +183,6 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           },
           body: JSON.stringify({ userId }),
         }).catch(err => console.error('Send memory error:', err)),
-        // Telegram alert - fire and forget
-        fetch('/api/telegram/alert', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            type: 'memory',
-            from: 'client',
-            timestamp: new Date().toLocaleString('vi-VN'),
-          }),
-        }).catch(err => console.error('Telegram alert error:', err)),
       ]);
 
       if (memoryResult.status === 'fulfilled' && memoryResult.value.data) {
