@@ -37,8 +37,8 @@ export function usePullToRefresh({
     if (!enabled) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Only trigger if at the top of the page
-      if (window.scrollY === 0 && !isRefreshing) {
+      // Only trigger if at the top of the page and not already refreshing
+      if (window.scrollY === 0 && !isRefreshing && !isDragging.current) {
         startY.current = e.touches[0].clientY;
         currentY.current = e.touches[0].clientY;
         isDragging.current = true;
@@ -51,7 +51,7 @@ export function usePullToRefresh({
       currentY.current = e.touches[0].clientY;
       const distance = currentY.current - startY.current;
 
-      // Only allow pull down
+      // Only allow pull down when at top
       if (distance > 0 && window.scrollY === 0) {
         e.preventDefault();
         // Use requestAnimationFrame for smoother updates
@@ -59,10 +59,12 @@ export function usePullToRefresh({
           setPullDistance(distance);
           setIsPulling(distance > 10);
         });
-      } else {
+      } else if (distance <= 0 || window.scrollY > 0) {
+        // Reset if scrolling up or page is scrolled
         requestAnimationFrame(() => {
           setPullDistance(0);
           setIsPulling(false);
+          isDragging.current = false;
         });
       }
     };
@@ -78,21 +80,72 @@ export function usePullToRefresh({
         setIsPulling(false);
         handleRefresh();
       } else {
+        // Smooth reset
+        requestAnimationFrame(() => {
+          setPullDistance(0);
+          setIsPulling(false);
+        });
+      }
+    };
+
+    // Also support mouse events for desktop testing
+    const handleMouseDown = (e: MouseEvent) => {
+      if (window.scrollY === 0 && !isRefreshing && !isDragging.current) {
+        startY.current = e.clientY;
+        currentY.current = e.clientY;
+        isDragging.current = true;
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || isRefreshing) return;
+
+      currentY.current = e.clientY;
+      const distance = currentY.current - startY.current;
+
+      if (distance > 0 && window.scrollY === 0) {
+        e.preventDefault();
+        requestAnimationFrame(() => {
+          setPullDistance(distance);
+          setIsPulling(distance > 10);
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!isDragging.current) return;
+
+      const finalDistance = pullDistance;
+      isDragging.current = false;
+
+      if (finalDistance >= threshold && !isRefreshing) {
         setPullDistance(0);
         setIsPulling(false);
+        handleRefresh();
+      } else {
+        requestAnimationFrame(() => {
+          setPullDistance(0);
+          setIsPulling(false);
+        });
       }
     };
 
     document.addEventListener('touchstart', handleTouchStart, { passive: false });
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [enabled, threshold, pullDistance, isRefreshing, handleRefresh]);
+  }, [enabled, threshold, isRefreshing, handleRefresh]);
 
   return {
     isPulling,

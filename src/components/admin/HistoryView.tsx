@@ -34,6 +34,37 @@ function MessageItem({ message, createdAt }: { message: string; createdAt: strin
   );
 }
 
+// Component for daily message with expand/collapse (2-3 lines)
+function DailyMessageItem({ message }: { message: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const MAX_LINES = 3; // Show 2-3 lines
+  const MAX_LENGTH = 150; // Approximate 2-3 lines
+  
+  const shouldTruncate = message.length > MAX_LENGTH;
+  const displayText = isExpanded ? message : (shouldTruncate ? message.substring(0, MAX_LENGTH) + '...' : message);
+
+  return (
+    <div className="bg-gradient-to-r from-romantic-glow/20 to-romantic-accent/20 rounded-lg p-4 border border-romantic-glow/30">
+      <div className="flex items-start space-x-2">
+        <span className="text-2xl flex-shrink-0">💕</span>
+        <div className="flex-1">
+          <p className={`text-white text-sm leading-relaxed ${!isExpanded && shouldTruncate ? 'line-clamp-3' : ''}`}>
+            {displayText}
+          </p>
+          {shouldTruncate && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-2 text-romantic-glow/60 text-xs hover:text-romantic-glow transition-colors"
+            >
+              {isExpanded ? '▼ Thu gọn' : '▶ Xem thêm'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface HistoryViewProps {
   data: {
     reactions: Reaction[];
@@ -347,7 +378,12 @@ export function HistoryView({ data }: HistoryViewProps) {
       </div>
 
       {/* Grouped Items by Date */}
-      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" style={{ 
+        overscrollBehavior: 'contain', 
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
+        willChange: 'scroll-position'
+      }}>
         {groupedItems.length === 0 ? (
           <p className="text-romantic-glow/60 text-sm text-center py-8">
             Chưa có tương tác nào
@@ -375,14 +411,7 @@ export function HistoryView({ data }: HistoryViewProps) {
 
               {/* Daily Message (Love Message) */}
               {dailyMessage && (
-                <div className="bg-gradient-to-r from-romantic-glow/20 to-romantic-accent/20 rounded-lg p-4 border border-romantic-glow/30">
-                  <div className="flex items-start space-x-2">
-                    <span className="text-2xl flex-shrink-0">💕</span>
-                    <div className="flex-1">
-                      <p className="text-white text-sm leading-relaxed">{dailyMessage}</p>
-                    </div>
-                  </div>
-                </div>
+                <DailyMessageItem message={dailyMessage} />
               )}
 
               {/* Items for this date */}

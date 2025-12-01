@@ -361,7 +361,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
       // Trigger glow effect if count increased
       if (newCount > prevMemoryCountRef.current) {
         setGlowEffect(true);
-        setTimeout(() => setGlowEffect(false), 2000); // 2 seconds glow
+        setTimeout(() => setGlowEffect(false), 4000); // 4 seconds magical glow
       }
       
       prevMemoryCountRef.current = newCount;
@@ -425,10 +425,13 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
 
   return (
     <div className={`h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light relative overflow-hidden flex flex-col transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
-      {/* Glow overlay effect */}
+      {/* Magical glow overlay effect */}
       {glowEffect && (
         <div className="fixed inset-0 pointer-events-none z-50 animate-fade-out">
-          <div className="absolute inset-0 bg-gradient-to-br from-romantic-glow/30 via-romantic-accent/20 to-romantic-glow/30 animate-pulse-soft" />
+          <div className="absolute inset-0" style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(46, 100, 254, 0.4) 0%, rgba(0, 212, 255, 0.3) 30%, rgba(168, 85, 247, 0.2) 60%, transparent 100%)',
+            animation: 'magical-overlay 4s ease-out forwards'
+          }} />
         </div>
       )}
       {/* Pull to refresh overlay */}
