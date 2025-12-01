@@ -1,0 +1,43 @@
+{
+  "name": "mei-project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/ssr": "^0.1.0",
+    "@supabase/supabase-js": "^2.86.0",
+    "crypto-js": "^4.2.0",
+    "date-fns": "^2.30.0",
+    "emoji-picker-react": "^4.16.1",
+    "framer-motion": "^10.16.16",
+    "next": "^14.0.4",
+    "next-pwa": "^5.6.0",
+    "node-telegram-bot-api": "^0.64.0",
+    "openai": "^4.20.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.1",
+    "@types/node": "^20.10.6",
+    "@types/node-telegram-bot-api": "^0.64.13",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/uuid": "^9.0.7",
+    "autoprefixer": "^10.4.16",
+    "cross-env": "^10.1.0",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.0.4",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3"
+  }
+}
