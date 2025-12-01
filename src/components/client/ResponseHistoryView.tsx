@@ -449,7 +449,6 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
                   backgroundRepeat: 'no-repeat',
                   color: 'transparent', // Hide text in closed state
                 }}
-                title="Lọc theo ngày"
               >
                 <option value="">📅 Tất cả ngày</option>
                 {dateFilterOptions.recent.length > 0 && (

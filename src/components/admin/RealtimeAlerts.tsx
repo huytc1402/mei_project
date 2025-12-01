@@ -26,7 +26,8 @@ function formatDate(dateString: string | undefined | null): string {
 export function RealtimeAlerts({ data }: RealtimeAlertsProps) {
   const latestReaction = data.reactions[0];
   const latestMessage = data.messages[0];
-  const latestMemory = data.memories[0];
+  // Only show memories from client (not admin)
+  const latestMemory = data.memories.find(m => m.senderRole === 'client');
 
   return (
     <div className="space-y-4">

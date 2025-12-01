@@ -291,11 +291,18 @@ export function HistoryView({ data }: HistoryViewProps) {
           
           {/* Date Filter - Icon only */}
           <div className="flex items-center gap-1.5 ml-auto">
-            <span className="text-romantic-glow/60 text-xs">🔽</span>
             <select
               value={selectedDate || ''}
               onChange={(e) => setSelectedDate(e.target.value || null)}
-              className="px-3 py-1.5 bg-romantic-soft/50 border border-romantic-light/30 rounded-lg text-white text-xs focus:outline-none focus:border-romantic-glow/50"
+              //className="px-3 py-1.5 bg-romantic-soft/50 border border-romantic-light/30 rounded-lg text-white text-xs focus:outline-none focus:border-romantic-glow/50"
+              className="date-filter-select w-8 h-8 bg-romantic-soft/50 border border-romantic-light/30 rounded-lg text-white focus:outline-none focus:border-romantic-glow/50 appearance-none cursor-pointer hover:bg-romantic-soft/70 transition-colors"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23${'2E64FE'.replace(/#/g, '')}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='6' x2='21' y2='6'/%3E%3Cline x1='7' y1='12' x2='7' y2='12'/%3E%3Cline x1='11' y1='18' x2='11' y2='18'/%3E%3Cline x1='15' y1='12' x2='15' y2='12'/%3E%3Cline x1='19' y1='6' x2='19' y2='6'/%3E%3C/svg%3E")`,
+                backgroundPosition: 'center',
+                backgroundSize: '1rem',
+                backgroundRepeat: 'no-repeat',
+                color: 'transparent', // Hide text in closed state
+              }}
             >
             <option value="">📅 Tất cả ngày</option>
             {dateFilterOptions.recent.length > 0 && (
@@ -340,7 +347,7 @@ export function HistoryView({ data }: HistoryViewProps) {
       </div>
 
       {/* Grouped Items by Date */}
-      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
         {groupedItems.length === 0 ? (
           <p className="text-romantic-glow/60 text-sm text-center py-8">
             Chưa có tương tác nào
@@ -357,7 +364,7 @@ export function HistoryView({ data }: HistoryViewProps) {
             return (
             <div key={dateKey} className="space-y-3">
               {/* Date Header */}
-              <div className="sticky top-0 bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20 z-10">
+              <div className="bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20">
                 <h3 className="text-romantic-glow font-medium text-sm">
                   {format(new Date(dateKey), 'EEEE, dd MMMM yyyy', { locale: vi })}
                 </h3>

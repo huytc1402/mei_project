@@ -25,6 +25,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
     messages: [],
     memories: [],
   });
+  const [glowEffect, setGlowEffect] = useState(false); // For glow effect when client sends memory
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
 
@@ -214,6 +215,9 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
             }));
             // Show notification
             showClientMemoryNotification();
+            // Trigger glow effect
+            setGlowEffect(true);
+            setTimeout(() => setGlowEffect(false), 2000); // 2 seconds glow
           } else {
             console.log('📝 Admin: Admin memory (no notification)');
             // Also add admin memories to the list (but don't show notification)
@@ -268,7 +272,13 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4 relative">
+    <div className={`min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4 relative transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
+      {/* Glow overlay effect */}
+      {glowEffect && (
+        <div className="fixed inset-0 pointer-events-none z-50 animate-fade-out">
+          <div className="absolute inset-0 bg-gradient-to-br from-romantic-glow/30 via-romantic-accent/20 to-romantic-glow/30 animate-pulse-soft" />
+        </div>
+      )}
       {/* Pull to refresh overlay */}
       {(isPulling || isRefreshing) && (
         <div 
