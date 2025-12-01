@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Message, Reaction, Memory } from '@/types';
 import { format, startOfDay, isSameDay, isToday, isYesterday, isThisWeek, isThisMonth, differenceInDays } from 'date-fns';
 import vi from 'date-fns/locale/vi';
+import { createClient } from '@/lib/supabase/client';
 
 // Component for message with expand/collapse
 function MessageItem({ message, createdAt }: { message: string; createdAt: string }) {
@@ -60,6 +61,74 @@ function formatDate(dateString: string | undefined | null): string {
 export function HistoryView({ data }: HistoryViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'reaction' | 'message' | 'memory'>('all');
+  const [dailyMessages, setDailyMessages] = useState<Map<string, string>>(new Map());
+  const supabase = createClient();
+
+  // Load daily notifications
+  useEffect(() => {
+    async function loadDailyMessages() {
+      try {
+        console.log('📨 Loading daily messages for history...');
+        // Get client user ID
+        const { data: clientUsers, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'client')
+          .limit(1);
+
+        if (userError) {
+          console.error('Error loading client user:', userError);
+          return;
+        }
+
+        if (!clientUsers || clientUsers.length === 0) {
+          console.log('No client user found');
+          return;
+        }
+
+        const clientId = (clientUsers[0] as any).id;
+        console.log('Client ID:', clientId);
+
+        // Get all daily notifications
+        const { data: notifications, error: notifError } = await supabase
+          .from('daily_notifications')
+          .select('content, sent_at')
+          .eq('user_id', clientId)
+          .order('sent_at', { ascending: false });
+
+        if (notifError) {
+          console.error('Error loading notifications:', notifError);
+          return;
+        }
+
+        console.log('Loaded notifications:', notifications?.length || 0);
+
+        if (notifications && notifications.length > 0) {
+          const messagesMap = new Map<string, string>();
+          notifications.forEach(notif => {
+            // Use UTC to avoid timezone issues
+            const date = new Date(notif.sent_at);
+            const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dateKey = format(utcDate, 'yyyy-MM-dd');
+            console.log(`Mapping notification: ${dateKey} (from ${notif.sent_at}) -> ${notif.content.substring(0, 50)}...`);
+            // Only keep the first (latest) notification for each date
+            if (!messagesMap.has(dateKey)) {
+              messagesMap.set(dateKey, notif.content);
+            }
+          });
+          console.log('Daily messages map keys:', Array.from(messagesMap.keys()));
+          console.log('Daily messages map size:', messagesMap.size);
+          setDailyMessages(messagesMap);
+        } else {
+          console.log('No daily notifications found');
+        }
+      } catch (error) {
+        console.error('Load daily messages error:', error);
+      }
+    }
+
+    loadDailyMessages();
+  }, [supabase]);
 
   const allItems: HistoryItem[] = useMemo(() => {
     const items = [
@@ -96,8 +165,10 @@ export function HistoryView({ data }: HistoryViewProps) {
     const groups = new Map<string, HistoryItem[]>();
     
     allItems.forEach(item => {
-      const date = startOfDay(new Date(item.createdAt));
-      const dateKey = format(date, 'yyyy-MM-dd', { locale: vi });
+      // Use UTC to avoid timezone issues - match the format used for daily messages
+      const date = new Date(item.createdAt);
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dateKey = format(utcDate, 'yyyy-MM-dd');
       
       if (!groups.has(dateKey)) {
         groups.set(dateKey, []);
@@ -275,7 +346,15 @@ export function HistoryView({ data }: HistoryViewProps) {
             Chưa có tương tác nào
           </p>
         ) : (
-          groupedItems.map(([dateKey, items]) => (
+          groupedItems.map(([dateKey, items]) => {
+            const dailyMessage = dailyMessages.get(dateKey);
+            // Debug log
+            if (dailyMessage) {
+              console.log(`✅ Found daily message for ${dateKey}: ${dailyMessage.substring(0, 50)}...`);
+            } else {
+              console.log(`❌ No daily message for ${dateKey} (available keys: ${Array.from(dailyMessages.keys()).join(', ')})`);
+            }
+            return (
             <div key={dateKey} className="space-y-3">
               {/* Date Header */}
               <div className="sticky top-0 bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20 z-10">
@@ -286,6 +365,18 @@ export function HistoryView({ data }: HistoryViewProps) {
                   {items.length} {items.length === 1 ? 'phản hồi' : 'phản hồi'}
                 </p>
               </div>
+
+              {/* Daily Message (Love Message) */}
+              {dailyMessage && (
+                <div className="bg-gradient-to-r from-romantic-glow/20 to-romantic-accent/20 rounded-lg p-4 border border-romantic-glow/30">
+                  <div className="flex items-start space-x-2">
+                    <span className="text-2xl flex-shrink-0">💕</span>
+                    <div className="flex-1">
+                      <p className="text-white text-sm leading-relaxed">{dailyMessage}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Items for this date */}
               <div className="space-y-2 pl-2">
@@ -348,7 +439,8 @@ export function HistoryView({ data }: HistoryViewProps) {
                 ))}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export function SendMemory() {
@@ -10,10 +10,42 @@ export function SendMemory() {
   const [clientMemoryCount, setClientMemoryCount] = useState(0);
   const COOLDOWN_SECONDS = 3;
   const supabase = createClient();
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     loadClientMemoryCount();
-  }, []);
+    
+    // Setup realtime subscription for memories
+    const channel = supabase
+      .channel('admin-memory-count')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'memories',
+        },
+        (payload: { new: any }) => {
+          const memory = payload.new as any;
+          // Only update if it's from client
+          if (memory.sender_role === 'client') {
+            console.log('📢 Admin: Client memory detected, updating count');
+            loadClientMemoryCount();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Admin memory count subscription status:', status);
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
+  }, [supabase]);
 
   useEffect(() => {
     if (isSending && cooldown > 0) {
@@ -71,6 +103,8 @@ export function SendMemory() {
 
       if (result.success) {
         setLastSent(new Date());
+        // Reload client memory count after sending
+        await loadClientMemoryCount();
         // Re-enable after cooldown
         setTimeout(() => {
           setIsSending(false);

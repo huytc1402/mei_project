@@ -250,8 +250,10 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             console.log('📢 Client: Admin memory detected, showing notification');
             // Show notification to client
             showAdminMemoryNotificationRef.current?.();
-            // Update admin memory count
-            loadAdminMemoryCountRef.current?.();
+            // Update admin memory count immediately
+            if (loadAdminMemoryCountRef.current) {
+              loadAdminMemoryCountRef.current();
+            }
           } else {
             console.log('📝 Client: Memory is not from admin or not for this user');
           }

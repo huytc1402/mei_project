@@ -169,16 +169,50 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
     setShowClearConfirm(true);
   }, []);
 
-  const confirmClearAll = useCallback(() => {
-    // Clear local state only (not database, so admin can still see)
-    setHistory([]);
-    setExpandedMessages(new Set());
-    // Clear cache in parent
-    if (onHistoryLoaded) {
-      onHistoryLoaded([]);
+  const confirmClearAll = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Delete all reactions
+      const { error: reactionsError } = await supabase
+        .from('reactions')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (reactionsError) {
+        console.error('Error deleting reactions:', reactionsError);
+        throw reactionsError;
+      }
+
+      // Delete all messages
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (messagesError) {
+        console.error('Error deleting messages:', messagesError);
+        throw messagesError;
+      }
+
+      // Clear local state
+      setHistory([]);
+      setExpandedMessages(new Set());
+      
+      // Clear cache in parent
+      if (onHistoryLoaded) {
+        onHistoryLoaded([]);
+      }
+      
+      setShowClearConfirm(false);
+      console.log('All history cleared successfully');
+    } catch (error: any) {
+      console.error('Clear all error:', error);
+      alert('Có lỗi xảy ra khi xóa: ' + (error.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
     }
-    setShowClearConfirm(false);
-  }, [onHistoryLoaded]);
+  }, [userId, supabase, onHistoryLoaded]);
 
   const cancelClearAll = useCallback(() => {
     setShowClearConfirm(false);
@@ -310,7 +344,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
                 title="Xóa tất cả phản hồi"
               >
                 <span>🗑️</span>
-                <span>Xóa tất cả</span>
+                <span>Clear</span>
               </button>
             )}
           </div>
@@ -333,8 +367,8 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
                   Xác nhận xóa
                 </h3>
                 <p className="text-romantic-glow/70 text-sm mb-4">
-                  Bạn có chắc muốn xóa tất cả {history.length} phản hồi?<br />
-                  <span className="text-xs text-romantic-glow/50">(Admin vẫn có thể xem được)</span>
+                  Bạn có chắc muốn clear {history.length} phản hồi?<br />
+                  <span className="text-xs text-romantic-glow/50">(Không thể khôi phục)</span>
                 </p>
                 <div className="flex gap-3">
                   <button

@@ -71,23 +71,37 @@ export async function POST(request: NextRequest) {
               .single();
 
             if (deviceInsertError) {
-              console.error('Error creating device:', deviceInsertError);
-              // Continue anyway - device might already exist
-            }
-
-            // New device detected - need admin approval
-            // Send Telegram notification (will log if not configured)
-            try {
-              const { TelegramService } = await import('@/services/telegram.service');
-              const telegram = new TelegramService();
-              await telegram.sendNewDeviceAlert(
-                `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
-                new Date().toLocaleString('vi-VN')
-              );
-              console.log('Telegram notification sent for new device');
-            } catch (telegramError) {
-              console.error('Telegram notification error:', telegramError);
-              // Continue - notification failure shouldn't block device creation
+              console.error('❌ Error creating device:', deviceInsertError);
+              // Check if device already exists (unique constraint violation)
+              if (deviceInsertError.code === '23505') {
+                console.log('Device already exists, continuing...');
+              } else {
+                // Other error - still return error to user
+                return NextResponse.json(
+                  {
+                    success: false,
+                    error: 'Lỗi khi tạo thiết bị. Vui lòng thử lại.',
+                  },
+                  { status: 500 }
+                );
+              }
+            } else if (newDevice) {
+              console.log('✅ New device created successfully:', (newDevice as any).id);
+              
+              // New device detected - need admin approval
+              // Send Telegram notification (will log if not configured)
+              try {
+                const { TelegramService } = await import('@/services/telegram.service');
+                const telegram = new TelegramService();
+                await telegram.sendNewDeviceAlert(
+                  `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
+                  new Date().toLocaleString('vi-VN')
+                );
+                console.log('✅ Telegram notification sent for new device');
+              } catch (telegramError) {
+                console.error('❌ Telegram notification error:', telegramError);
+                // Continue - notification failure shouldn't block device creation
+              }
             }
 
             return NextResponse.json(
