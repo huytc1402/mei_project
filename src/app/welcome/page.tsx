@@ -17,7 +17,7 @@ export default function WelcomePage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  // Check device status when token changes
+  // Check device status when token changes (only for client)
   useEffect(() => {
     if (!token || token.length < 5) {
       setWaitingForApproval(false);
@@ -26,6 +26,8 @@ export default function WelcomePage() {
 
     const checkDeviceStatus = async () => {
       try {
+        // Quick check: if token is admin token, skip device check (admin auto-approved)
+        // We'll verify this in the actual login, but for UI we can skip the check
         const fingerprint = generateFingerprint();
         const response = await fetch('/api/devices/check-status', {
           method: 'POST',
@@ -37,6 +39,8 @@ export default function WelcomePage() {
 
         const result = await response.json();
         if (result.success) {
+          // Only show waiting if it's a client and needs approval
+          // Admin will always return isApproved: true
           setWaitingForApproval(result.needsApproval === true);
         }
       } catch (error) {

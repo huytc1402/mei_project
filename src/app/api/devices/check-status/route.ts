@@ -32,9 +32,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Admin: Always auto-approved, no need to check device status
+    if (role === 'admin') {
+      return NextResponse.json({
+        success: true,
+        isApproved: true,
+        needsApproval: false,
+      });
+    }
+
     const supabase = createAdminClient();
 
-    // Get user
+    // Get user (only for client)
     const { data: users } = await supabase
       .from('users')
       .select('id')
