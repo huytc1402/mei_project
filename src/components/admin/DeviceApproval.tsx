@@ -26,12 +26,18 @@ export function DeviceApproval() {
     setLoading(true);
     try {
       // Get all devices
-      const { data: allDevices } = await supabase
+      const { data: allDevices, error: devicesError } = await supabase
         .from('devices')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (devicesError) {
+        console.error('Error loading devices:', devicesError);
+        return;
+      }
+
       if (allDevices) {
+        console.log(`Loaded ${allDevices.length} devices from database`);
         // Remove duplicates based on fingerprint (keep the latest one)
         const uniqueDevices = new Map<string, Device>();
         allDevices.forEach((d: any) => {
@@ -45,8 +51,13 @@ export function DeviceApproval() {
         const pending = devicesArray.filter((d) => !d.is_active);
         const active = devicesArray.filter((d) => d.is_active);
         
+        console.log(`Found ${pending.length} pending devices, ${active.length} active devices`);
         setPendingDevices(pending);
         setActiveDevices(active);
+      } else {
+        console.log('No devices found');
+        setPendingDevices([]);
+        setActiveDevices([]);
       }
     } catch (error) {
       console.error('Load devices error:', error);
@@ -70,13 +81,15 @@ export function DeviceApproval() {
             schema: 'public',
             table: 'devices',
           },
-          () => {
+          (payload) => {
+            console.log('🆕 New device inserted via realtime:', payload.new);
             // Debounce to avoid multiple rapid calls
             if (debounceTimer) {
               clearTimeout(debounceTimer);
             }
             debounceTimer = setTimeout(() => {
               if (mounted) {
+                console.log('Reloading devices after INSERT event');
                 loadDevices();
               }
             }, 500);
@@ -89,13 +102,15 @@ export function DeviceApproval() {
             schema: 'public',
             table: 'devices',
           },
-          () => {
+          (payload) => {
+            console.log('🔄 Device updated via realtime:', payload.new);
             // Debounce to avoid multiple rapid calls
             if (debounceTimer) {
               clearTimeout(debounceTimer);
             }
             debounceTimer = setTimeout(() => {
               if (mounted) {
+                console.log('Reloading devices after UPDATE event');
                 loadDevices();
               }
             }, 500);
@@ -108,19 +123,28 @@ export function DeviceApproval() {
             schema: 'public',
             table: 'devices',
           },
-          () => {
+          (payload) => {
+            console.log('🗑️ Device deleted via realtime:', payload.old);
             // Debounce to avoid multiple rapid calls
             if (debounceTimer) {
               clearTimeout(debounceTimer);
             }
             debounceTimer = setTimeout(() => {
               if (mounted) {
+                console.log('Reloading devices after DELETE event');
                 loadDevices();
               }
             }, 500);
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Realtime subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Successfully subscribed to device updates');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Realtime channel error - check Supabase realtime configuration');
+          }
+        });
 
       return () => {
         if (channel) {
@@ -202,6 +226,19 @@ export function DeviceApproval() {
 
   return (
     <div className="space-y-6">
+      {/* Manual Refresh Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            console.log('Manual refresh triggered');
+            loadDevices();
+          }}
+          className="px-4 py-2 bg-romantic-glow/20 text-romantic-glow rounded-lg text-sm hover:bg-romantic-glow/30 transition-colors"
+        >
+          🔄 Làm mới
+        </button>
+      </div>
+
       {/* Pending Devices */}
       <div className="bg-romantic-soft/40 rounded-2xl p-6 border border-romantic-light/30">
         <h2 className="text-xl font-light text-white mb-4">

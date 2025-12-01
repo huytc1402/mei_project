@@ -58,21 +58,37 @@ export async function POST(request: NextRequest) {
 
           if (!existingDevice) {
             // Create new device with is_active = false (pending approval)
-            await supabase.from('devices').insert({
-              user_id: userId,
-              fingerprint,
-              user_agent: userAgent,
-              ip_hash: ipHash,
-              is_active: false, // Chờ admin approval
-            } as any);
-          
+            const { data: newDevice, error: deviceInsertError } = await supabase
+              .from('devices')
+              .insert({
+                user_id: userId,
+                fingerprint,
+                user_agent: userAgent,
+                ip_hash: ipHash,
+                is_active: false, // Chờ admin approval
+              } as any)
+              .select()
+              .single();
+
+            if (deviceInsertError) {
+              console.error('Error creating device:', deviceInsertError);
+              // Continue anyway - device might already exist
+            }
+
             // New device detected - need admin approval
-            const { TelegramService } = await import('@/services/telegram.service');
-            const telegram = new TelegramService();
-            await telegram.sendNewDeviceAlert(
-              `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
-              new Date().toLocaleString('vi-VN')
-            );
+            // Send Telegram notification (will log if not configured)
+            try {
+              const { TelegramService } = await import('@/services/telegram.service');
+              const telegram = new TelegramService();
+              await telegram.sendNewDeviceAlert(
+                `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
+                new Date().toLocaleString('vi-VN')
+              );
+              console.log('Telegram notification sent for new device');
+            } catch (telegramError) {
+              console.error('Telegram notification error:', telegramError);
+              // Continue - notification failure shouldn't block device creation
+            }
 
             return NextResponse.json(
               {
