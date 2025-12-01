@@ -67,22 +67,55 @@ export class NotificationService {
 
     if (!clientUsers) return;
 
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentSecond = now.getSeconds();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    // Check each schedule
     for (const schedule of schedules) {
       const scheduleData = schedule as any;
       const [hours, minutes] = scheduleData.time.split(':').map(Number);
-      const now = new Date();
-      const scheduledTime = new Date();
-      scheduledTime.setHours(hours, minutes, 0, 0);
+      const scheduleTimeInMinutes = hours * 60 + minutes;
+      
+      // Calculate time difference
+      const timeDiff = currentTimeInMinutes - scheduleTimeInMinutes;
+      
+      // Send if schedule time matches (within 5 minutes window)
+      // This works for both:
+      // - Vercel cron (runs once/day): sends all schedules that should have been sent
+      // - External cron (runs every 5 min): sends only schedules within 5 min window
+      const isWithinWindow = timeDiff >= 0 && timeDiff <= 5;
+      const isExactTime = timeDiff === 0 && currentSecond < 10;
+      
+      if (isWithinWindow || isExactTime) {
+        // Check if notification was already sent today for this schedule
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStart = tomorrow.toISOString();
 
-      // Check if it's time to send
-      if (
-        now.getHours() === hours &&
-        now.getMinutes() === minutes &&
-        now.getSeconds() < 10
-      ) {
         for (const user of clientUsers) {
           const userData = user as any;
+          
+          // Check if notification already sent today
+          const { data: existingNotification } = await this.supabase
+            .from('daily_notifications')
+            .select('id')
+            .eq('user_id', userData.id)
+            .gte('sent_at', todayStart)
+            .lt('sent_at', tomorrowStart)
+            .limit(1)
+            .maybeSingle();
+
+          // Only send if not already sent today
+          if (!existingNotification) {
           await this.sendDailyNotification(userData.id);
+          }
         }
       }
     }

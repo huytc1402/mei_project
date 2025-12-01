@@ -212,15 +212,15 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
             showClientMemoryNotification();
           } else {
             // Also add admin memories to the list (but don't show notification)
-            setRealtimeData((prev: typeof realtimeData) => ({
-              ...prev,
-              memories: [{
-                id: memory.id,
-                userId: memory.user_id,
+          setRealtimeData((prev: typeof realtimeData) => ({
+            ...prev,
+            memories: [{
+              id: memory.id,
+              userId: memory.user_id,
                 senderRole: memory.sender_role || 'admin',
-                createdAt: memory.created_at,
-              }, ...prev.memories].slice(0, 20),
-            }));
+              createdAt: memory.created_at,
+            }, ...prev.memories].slice(0, 20),
+          }));
           }
         }
       )

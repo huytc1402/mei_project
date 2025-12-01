@@ -299,7 +299,7 @@ export function HistoryView({ data }: HistoryViewProps) {
                         <span className="text-3xl flex-shrink-0">{(item as Reaction & { itemType: 'reaction' }).emoji}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-white text-sm">Phản hồi emoji</p>
+                          <p className="text-white text-sm">Phản hồi emoji</p>
                             <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50">
                               💕 Client
                             </span>
@@ -318,7 +318,7 @@ export function HistoryView({ data }: HistoryViewProps) {
                             💕 Client
                           </span>
                         </div>
-                        <MessageItem message={(item as Message & { itemType: 'message' }).content} createdAt={item.createdAt} />
+                      <MessageItem message={(item as Message & { itemType: 'message' }).content} createdAt={item.createdAt} />
                       </div>
                     )}
 
@@ -327,7 +327,7 @@ export function HistoryView({ data }: HistoryViewProps) {
                         <span className="text-3xl">✨</span>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="text-white text-sm">Đã nhấn Nhớ</p>
+                          <p className="text-white text-sm">Đã nhấn Nhớ</p>
                             {(item as Memory & { itemType: 'memory' }).senderRole && (
                               <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
                                 (item as Memory & { itemType: 'memory' }).senderRole === 'admin'

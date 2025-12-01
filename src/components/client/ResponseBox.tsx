@@ -186,14 +186,14 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
     if (messageContent && !sendingMessage) {
       setSendingMessage(true);
       try {
-        await onMessage(messageContent);
-        setText('');
-        // Clear suggestions after sending
-        setSuggestions([]);
-        setHasGeneratedSuggestions(false);
-        setLoadingSuggestions(false);
-        // Show success popup
-        setShowSuccessPopup(true);
+      await onMessage(messageContent);
+      setText('');
+      // Clear suggestions after sending
+      setSuggestions([]);
+      setHasGeneratedSuggestions(false);
+      setLoadingSuggestions(false);
+      // Show success popup
+      setShowSuccessPopup(true);
       } catch (error) {
         console.error('Error sending message:', error);
       } finally {
