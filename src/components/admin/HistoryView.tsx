@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 function MessageItem({ message, createdAt }: { message: string; createdAt: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const MAX_LENGTH = 100; // Approximate 2 lines
-  
+
   const shouldTruncate = message.length > MAX_LENGTH;
   const displayText = isExpanded ? message : (shouldTruncate ? message.substring(0, MAX_LENGTH) + '...' : message);
 
@@ -39,7 +39,7 @@ function DailyMessageItem({ message }: { message: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const MAX_LINES = 3; // Show 2-3 lines
   const MAX_LENGTH = 150; // Approximate 2-3 lines
-  
+
   const shouldTruncate = message.length > MAX_LENGTH;
   const displayText = isExpanded ? message : (shouldTruncate ? message.substring(0, MAX_LENGTH) + '...' : message);
 
@@ -194,13 +194,13 @@ export function HistoryView({ data }: HistoryViewProps) {
   // Group items by date
   const groupedItems = useMemo(() => {
     const groups = new Map<string, HistoryItem[]>();
-    
+
     allItems.forEach(item => {
       // Use UTC to avoid timezone issues - match the format used for daily messages
       const date = new Date(item.createdAt);
       const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
       const dateKey = format(utcDate, 'yyyy-MM-dd');
-      
+
       if (!groups.has(dateKey)) {
         groups.set(dateKey, []);
       }
@@ -221,7 +221,7 @@ export function HistoryView({ data }: HistoryViewProps) {
       ...data.messages.map((m) => ({ ...m, itemType: 'message' as const })),
       ...data.memories.map((m) => ({ ...m, itemType: 'memory' as const })),
     ];
-    
+
     allItemsForDates.forEach(item => {
       const date = startOfDay(new Date(item.createdAt));
       dates.add(format(date, 'yyyy-MM-dd', { locale: vi }));
@@ -241,7 +241,7 @@ export function HistoryView({ data }: HistoryViewProps) {
     sortedDates.forEach(dateStr => {
       const date = new Date(dateStr);
       const daysDiff = differenceInDays(today, date);
-      
+
       let label = '';
       if (isToday(date)) {
         label = 'Hôm nay';
@@ -281,45 +281,41 @@ export function HistoryView({ data }: HistoryViewProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-              filterType === 'all'
+            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${filterType === 'all'
                 ? 'bg-romantic-glow text-white'
                 : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+              }`}
           >
             Tất cả
           </button>
           <button
             onClick={() => setFilterType('reaction')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-              filterType === 'reaction'
+            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${filterType === 'reaction'
                 ? 'bg-romantic-glow text-white'
                 : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+              }`}
           >
             Emoji
           </button>
           <button
             onClick={() => setFilterType('message')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-              filterType === 'message'
+            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${filterType === 'message'
                 ? 'bg-romantic-glow text-white'
                 : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+              }`}
           >
             Tin nhắn
           </button>
           <button
             onClick={() => setFilterType('memory')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-              filterType === 'memory'
+            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${filterType === 'memory'
                 ? 'bg-romantic-glow text-white'
                 : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+              }`}
           >
             Nhớ
           </button>
-          
+
           {/* Date Filter - Icon only */}
           <div className="flex items-center gap-1.5 ml-auto">
             <select
@@ -335,51 +331,51 @@ export function HistoryView({ data }: HistoryViewProps) {
                 color: 'transparent', // Hide text in closed state
               }}
             >
-            <option value="">📅 Tất cả ngày</option>
-            {dateFilterOptions.recent.length > 0 && (
-              <optgroup label="🕐 Gần đây">
-                {dateFilterOptions.recent.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {dateFilterOptions.thisWeek.length > 0 && (
-              <optgroup label="📆 Tuần này">
-                {dateFilterOptions.thisWeek.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {dateFilterOptions.thisMonth.length > 0 && (
-              <optgroup label="🗓️ Tháng này">
-                {dateFilterOptions.thisMonth.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {dateFilterOptions.older.length > 0 && (
-              <optgroup label="📜 Trước đó">
-                {dateFilterOptions.older.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
+              <option value="">📅 Tất cả ngày</option>
+              {dateFilterOptions.recent.length > 0 && (
+                <optgroup label="🕐 Gần đây">
+                  {dateFilterOptions.recent.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {dateFilterOptions.thisWeek.length > 0 && (
+                <optgroup label="📆 Tuần này">
+                  {dateFilterOptions.thisWeek.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {dateFilterOptions.thisMonth.length > 0 && (
+                <optgroup label="🗓️ Tháng này">
+                  {dateFilterOptions.thisMonth.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {dateFilterOptions.older.length > 0 && (
+                <optgroup label="📜 Trước đó">
+                  {dateFilterOptions.older.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
           </div>
         </div>
       </div>
 
       {/* Grouped Items by Date */}
-      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" style={{ 
-        overscrollBehavior: 'contain', 
+      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" style={{
+        overscrollBehavior: 'contain',
         WebkitOverflowScrolling: 'touch',
         scrollBehavior: 'smooth',
         willChange: 'scroll-position'
@@ -398,83 +394,82 @@ export function HistoryView({ data }: HistoryViewProps) {
               console.log(`❌ No daily message for ${dateKey} (available keys: ${Array.from(dailyMessages.keys()).join(', ')})`);
             }
             return (
-            <div key={dateKey} className="space-y-3">
-              {/* Date Header */}
-              <div className="bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20">
-                <h3 className="text-romantic-glow font-medium text-sm">
-                  {format(new Date(dateKey), 'EEEE, dd MMMM yyyy', { locale: vi })}
-                </h3>
-                <p className="text-romantic-glow/60 text-xs mt-0.5">
-                  {items.length} {items.length === 1 ? 'phản hồi' : 'phản hồi'}
-                </p>
-              </div>
+              <div key={dateKey} className="space-y-3">
+                {/* Date Header */}
+                <div className="bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20">
+                  <h3 className="text-romantic-glow font-medium text-sm">
+                    {format(new Date(dateKey), 'EEEE, dd MMMM yyyy', { locale: vi })}
+                  </h3>
+                  <p className="text-romantic-glow/60 text-xs mt-0.5">
+                    {items.length} {items.length === 1 ? 'phản hồi' : 'phản hồi'}
+                  </p>
+                </div>
 
-              {/* Daily Message (Love Message) */}
-              {dailyMessage && (
-                <DailyMessageItem message={dailyMessage} />
-              )}
+                {/* Daily Message (Love Message) */}
+                {dailyMessage && (
+                  <DailyMessageItem message={dailyMessage} />
+                )}
 
-              {/* Items for this date */}
-              <div className="space-y-2 pl-2">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-romantic-soft/30 rounded-lg p-4 border border-romantic-light/20"
-                  >
-                    {item.itemType === 'reaction' && (
-                      <div className="flex items-center space-x-3">
-                        <span className="text-3xl flex-shrink-0">{(item as Reaction & { itemType: 'reaction' }).emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                          <p className="text-white text-sm">Phản hồi emoji</p>
+                {/* Items for this date */}
+                <div className="space-y-2 pl-2">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-romantic-soft/30 rounded-lg p-4 border border-romantic-light/20"
+                    >
+                      {item.itemType === 'reaction' && (
+                        <div className="flex items-center space-x-3">
+                          <span className="text-3xl flex-shrink-0">{(item as Reaction & { itemType: 'reaction' }).emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-white text-sm">Phản hồi emoji</p>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50">
+                                💕 Client
+                              </span>
+                            </div>
+                            <p className="text-romantic-glow/60 text-xs">
+                              {formatDate(item.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {item.itemType === 'message' && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
                             <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50">
                               💕 Client
                             </span>
                           </div>
-                          <p className="text-romantic-glow/60 text-xs">
-                            {formatDate(item.createdAt)}
-                          </p>
+                          <MessageItem message={(item as Message & { itemType: 'message' }).content} createdAt={item.createdAt} />
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {item.itemType === 'message' && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50">
-                            💕 Client
-                          </span>
-                        </div>
-                      <MessageItem message={(item as Message & { itemType: 'message' }).content} createdAt={item.createdAt} />
-                      </div>
-                    )}
-
-                    {item.itemType === 'memory' && (
-                      <div className="flex items-center space-x-3">
-                        <span className="text-3xl">✨</span>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                          <p className="text-white text-sm">Đã nhấn Nhớ</p>
-                            {(item as Memory & { itemType: 'memory' }).senderRole && (
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                (item as Memory & { itemType: 'memory' }).senderRole === 'admin'
-                                  ? 'bg-romantic-glow/30 text-romantic-glow border border-romantic-glow/50'
-                                  : 'bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50'
-                              }`}>
-                                {(item as Memory & { itemType: 'memory' }).senderRole === 'admin' ? '👤 Admin' : '💕 Client'}
-                              </span>
-                            )}
+                      {item.itemType === 'memory' && (
+                        <div className="flex items-center space-x-3">
+                          <span className="text-3xl">✨</span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-white text-sm">Đã nhấn Nhớ</p>
+                              {(item as Memory & { itemType: 'memory' }).senderRole && (
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${(item as Memory & { itemType: 'memory' }).senderRole === 'admin'
+                                    ? 'bg-romantic-glow/30 text-romantic-glow border border-romantic-glow/50'
+                                    : 'bg-romantic-accent/30 text-romantic-accent border border-romantic-accent/50'
+                                  }`}>
+                                  {(item as Memory & { itemType: 'memory' }).senderRole === 'admin' ? '👤 Admin' : '💕 Client'}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-romantic-glow/60 text-xs">
+                              {formatDate(item.createdAt)}
+                            </p>
                           </div>
-                          <p className="text-romantic-glow/60 text-xs">
-                            {formatDate(item.createdAt)}
-                          </p>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
             );
           })
         )}

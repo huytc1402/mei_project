@@ -221,15 +221,15 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
           } else {
             console.log('📝 Admin: Admin memory (no notification)');
             // Also add admin memories to the list (but don't show notification)
-          setRealtimeData((prev: typeof realtimeData) => ({
-            ...prev,
-            memories: [{
-              id: memory.id,
-              userId: memory.user_id,
+            setRealtimeData((prev: typeof realtimeData) => ({
+              ...prev,
+              memories: [{
+                id: memory.id,
+                userId: memory.user_id,
                 senderRole: memory.sender_role || 'admin',
-              createdAt: memory.created_at,
-            }, ...prev.memories].slice(0, 20),
-          }));
+                createdAt: memory.created_at,
+              }, ...prev.memories].slice(0, 20),
+            }));
           }
         }
       )
@@ -275,16 +275,34 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
     <div className={`min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4 relative transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
       {/* Magical glow overlay effect */}
       {glowEffect && (
-        <div className="fixed inset-0 pointer-events-none z-50 animate-fade-out">
-          <div className="absolute inset-0" style={{
-            background: 'radial-gradient(circle at 50% 50%, rgba(46, 100, 254, 0.4) 0%, rgba(0, 212, 255, 0.3) 30%, rgba(168, 85, 247, 0.2) 60%, transparent 100%)',
-            animation: 'magical-overlay 4s ease-out forwards'
-          }} />
+        <div className="fixed inset-0 pointer-events-none z-[9999] dreamy-glow">
+          {/* MULTI-LAYER AURORA */}
+          <div className="aurora-layer layer-1" />
+          <div className="aurora-layer layer-2" />
+          <div className="aurora-layer layer-3" />
+
+          {/* Pulse */}
+          <div className="pulse-ring" />
+
+          {/* Sparkles */}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="sparkle"
+              style={{
+                left: `${50 + (Math.random() * 70 - 35)}%`,
+                top: `${50 + (Math.random() * 50 - 25)}%`,
+                animationDelay: `${i * 0.35}s`
+              }}
+            />
+          ))}
         </div>
       )}
+
+
       {/* Pull to refresh overlay */}
       {(isPulling || isRefreshing) && (
-        <div 
+        <div
           className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center justify-center transition-all duration-200"
           style={{
             height: `${Math.min(pullProgress * 100, 100)}px`,
@@ -299,7 +317,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <div 
+              <div
                 className="text-2xl transition-transform"
                 style={{ transform: `rotate(${pullProgress * 180}deg)` }}
               >
@@ -313,59 +331,53 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-light text-white mb-2">Admin Dashboard</h1>
-          <p className="text-romantic-glow/60 text-sm">Quản lý ứng dụng</p>
         </div>
 
         <div className="flex space-x-2 mb-6 bg-romantic-soft/30 rounded-lg p-1">
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${
-              activeTab === 'schedule'
-                ? 'bg-romantic-glow text-white'
-                : 'text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'schedule'
+              ? 'bg-romantic-glow text-white'
+              : 'text-romantic-glow/60 hover:text-romantic-glow'
+              }`}
           >
             Lịch thông báo
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${
-              activeTab === 'history'
-                ? 'bg-romantic-glow text-white'
-                : 'text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'history'
+              ? 'bg-romantic-glow text-white'
+              : 'text-romantic-glow/60 hover:text-romantic-glow'
+              }`}
           >
             Lịch sử
           </button>
           <button
             onClick={() => setActiveTab('alerts')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${
-              activeTab === 'alerts'
-                ? 'bg-romantic-glow text-white'
-                : 'text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'alerts'
+              ? 'bg-romantic-glow text-white'
+              : 'text-romantic-glow/60 hover:text-romantic-glow'
+              }`}
           >
-            Thông báo realtime
+            Thông báo Realtime
           </button>
           <button
             onClick={() => setActiveTab('devices')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${
-              activeTab === 'devices'
-                ? 'bg-romantic-glow text-white'
-                : 'text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'devices'
+              ? 'bg-romantic-glow text-white'
+              : 'text-romantic-glow/60 hover:text-romantic-glow'
+              }`}
           >
             Thiết bị
           </button>
           <button
             onClick={() => setActiveTab('send')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${
-              activeTab === 'send'
-                ? 'bg-romantic-glow text-white'
-                : 'text-romantic-glow/60 hover:text-romantic-glow'
-            }`}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'send'
+              ? 'bg-romantic-glow text-white'
+              : 'text-romantic-glow/60 hover:text-romantic-glow'
+              }`}
           >
-            Gửi Nhớ
+            Nhớ
           </button>
         </div>
 

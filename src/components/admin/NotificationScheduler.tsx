@@ -108,9 +108,6 @@ export function NotificationScheduler() {
       <div className="space-y-4 mb-6">
         <div className="flex space-x-3">
           <div className="flex-1 relative">
-            <label className="block text-romantic-glow/80 text-xs mb-1.5">
-              Chọn giờ thông báo
-            </label>
             <input
               type="time"
               value={time}
@@ -156,11 +153,10 @@ export function NotificationScheduler() {
               <div className="flex space-x-2">
                 <button
                   onClick={() => toggleSchedule(schedule.id, schedule.isActive)}
-                  className={`px-4 py-1 rounded text-xs ${
-                    schedule.isActive
+                  className={`px-4 py-1 rounded text-xs ${schedule.isActive
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-gray-500/20 text-gray-400'
-                  }`}
+                    }`}
                 >
                   {schedule.isActive ? 'Tắt' : 'Bật'}
                 </button>

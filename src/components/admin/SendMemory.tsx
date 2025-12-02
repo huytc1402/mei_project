@@ -14,7 +14,7 @@ export function SendMemory() {
 
   useEffect(() => {
     loadClientMemoryCount();
-    
+
     // Setup realtime subscription for memories
     const channel = supabase
       .channel('admin-memory-count')
@@ -77,7 +77,7 @@ export function SendMemory() {
           .select('*', { count: 'exact', head: true })
           .eq('user_id', clientId)
           .eq('sender_role', 'client');
-        
+
         setClientMemoryCount(count || 0);
       }
     } catch (error) {
@@ -90,7 +90,7 @@ export function SendMemory() {
 
     setIsSending(true);
     setCooldown(COOLDOWN_SECONDS);
-    
+
     try {
       const response = await fetch('/api/admin/send-memory', {
         method: 'POST',
@@ -126,66 +126,56 @@ export function SendMemory() {
   return (
     <div className="bg-gradient-to-br from-romantic-soft/50 to-romantic-light/30 rounded-2xl p-6 border border-romantic-glow/30 backdrop-blur-sm shadow-lg">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-light text-white">Gửi {"Nhớ"} cho cậu ấy</h2>
+
         {clientMemoryCount > 0 && (
           <div className="text-romantic-glow/80 text-sm">
             Cậu ấy đã nhớ: <span className="font-medium">{clientMemoryCount}</span> lần
           </div>
         )}
       </div>
-      <p className="text-romantic-glow/60 text-sm mb-6">
-        Nhấn nút bên dưới để gửi tín hiệu đom đóm đến client. Họ sẽ nhận được thông báo ngay lập tức.
-      </p>
 
-      <button
-        onClick={handleSendMemory}
-        disabled={isSending}
-        className="relative w-full py-5 bg-gradient-to-r from-romantic-accent via-romantic-glow to-romantic-accent rounded-2xl text-white font-medium text-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-xl hover:shadow-romantic-glow/30"
-        style={{
-          backgroundSize: '200% 200%',
-          animation: isSending ? 'none' : 'gradient-shift 4s ease infinite',
-        }}
-      >
-        {/* Sending animation / Cooldown */}
-        {isSending && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-2xl">
-            {cooldown > 0 ? (
-              <div className="text-center">
-                <div className="text-2xl mb-1 animate-spin">
-                  ✨
-                </div>
-                <p className="text-xs">Đợi {cooldown}s...</p>
-              </div>
-            ) : (
-              <div className="text-2xl animate-spin">
-                ✨
-              </div>
-            )}
+
+      {/* Memory Send Button - Style #1: Clean Loading */}
+      <div className="w-full">
+        <button
+          onClick={handleSendMemory}
+          disabled={isSending}
+          className="relative w-full py-5 bg-gradient-to-r from-romantic-accent via-romantic-glow to-romantic-accent rounded-2xl text-white font-medium text-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-xl hover:shadow-romantic-glow/30 flex items-center justify-center gap-2"
+          style={{
+            backgroundSize: '200% 200%',
+            animation: isSending ? 'gradient-shift 4s ease infinite' : 'none',
+          }}
+        >
+          {/* Loading State */}
+          {isSending ? (
+            <div className="flex items-center gap-2">
+              <span className="text-2xl animate-spin">✨</span>
+              {cooldown > 0 ? (
+                <span className="text-sm sm:text-base opacity-90">Đợi {cooldown}s...</span>
+              ) : (
+                <span className="text-sm sm:text-base opacity-90">Đang gửi...</span>
+              )}
+            </div>
+          ) : (
+            // Normal label
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">✨</span>
+              <span>Gửi {"Nhớ"}</span>
+            </div>
+          )}
+        </button>
+
+        {/* Last Sent Notification */}
+        {lastSent && (
+          <div className="mt-4 text-center animate-fade-in">
+            <p className="text-green-400/80 text-sm flex items-center justify-center gap-2">
+              <span>✓</span>
+              <span>Đã gửi lúc {lastSent.toLocaleTimeString('vi-VN')}</span>
+            </p>
           </div>
         )}
+      </div>
 
-        <span className="relative z-10 flex items-center justify-center space-x-2">
-          {!isSending ? (
-            <>
-              <span className="text-2xl">
-                ✨
-              </span>
-              <span>Gửi {"Nhớ"}</span>
-            </>
-          ) : (
-            <span>Đang gửi...</span>
-          )}
-        </span>
-      </button>
-
-      {lastSent && (
-        <div className="mt-4 text-center animate-fade-in">
-          <p className="text-green-400/80 text-sm flex items-center justify-center space-x-2">
-            <span>✓</span>
-            <span>Đã gửi lúc {lastSent.toLocaleTimeString('vi-VN')}</span>
-          </p>
-        </div>
-      )}
     </div>
   );
 }

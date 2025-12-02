@@ -41,17 +41,15 @@ export const NotificationToggle = memo(function NotificationToggle({ enabled, on
           </p>
         </div>
       </div>
-      
+
       <button
         onClick={handleToggle}
-        className={`relative w-14 h-7 rounded-full transition-colors  ${
-          enabled ? 'bg-gradient-to-r from-romantic-glow to-romantic-accent' : 'bg-romantic-light/50'
-        }`}
+        className={`relative w-14 h-7 rounded-full transition-colors  ${enabled ? 'bg-gradient-to-r from-romantic-glow to-romantic-accent' : 'bg-romantic-light/50'
+          }`}
       >
         <span
-          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${
-            enabled ? 'left-[calc(100%-1.5rem)]' : 'left-0.5'
-          }`}
+          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${enabled ? 'left-[calc(100%-1.5rem)]' : 'left-0.5'
+            }`}
         />
       </button>
     </div>

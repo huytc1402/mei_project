@@ -172,10 +172,7 @@ export default function WelcomePage() {
             <div className="bg-romantic-soft/40 border border-romantic-glow/30 rounded-lg p-4 text-center animate-fade-in">
               <div className="text-3xl mb-2 animate-pulse">⏳</div>
               <p className="text-romantic-glow/80 text-sm font-medium mb-1">
-                Đang chờ admin duyệt thiết bị
-              </p>
-              <p className="text-romantic-glow/60 text-xs">
-                Vui lòng đợi trong giây lát...
+                Chờ chút nhé...
               </p>
             </div>
           )}

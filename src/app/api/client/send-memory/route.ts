@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Send Telegram notification to admin
     const telegramService = new TelegramService();
     await telegramService.sendAlert(
-      `✨ Cậu ấy đã nhấn "Nhớ"!\n⏰ ${new Date().toLocaleString('vi-VN')}`
+      `✨ Cậu ấy đã nhấn "Nhớ"!\n ⏰ ${new Date().toLocaleString('vi-VN')}`
     );
 
     return NextResponse.json({

@@ -20,8 +20,8 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light" style={{ backgroundColor: '#0a0e1a' }}>
-        <div className="animate-pulse-soft text-4xl">✨</div>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light">
+        <div className="text-5xl animate-spin">⏳</div>
       </div>
     );
   }

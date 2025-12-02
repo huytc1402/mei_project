@@ -593,7 +593,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
                           <span className="text-3xl">✨</span>
                           <div className="flex-1">
                             <p className="text-white text-sm">
-                              {item.senderRole === 'client' ? 'Bạn đã nhấn "Nhớ"' : 'Đã nhận "Nhớ" từ admin'}
+                              {item.senderRole === 'client' ? 'Bạn đã nhấn "Nhớ"' : 'Đã nhận "Nhớ" từ Cậu ấy'}
                             </p>
                             <p className="text-romantic-glow/60 text-xs">
                               {formatDate(item.createdAt)}

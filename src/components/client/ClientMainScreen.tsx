@@ -25,7 +25,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   const prevMemoryCountRef = useRef(0); // Track previous count for glow effect
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
-  
+
   // Use refs for functions called in callbacks to avoid circular dependencies
   const loadAdminMemoryCountRef = useRef<() => Promise<void>>();
   const showAdminMemoryNotificationRef = useRef<() => Promise<void>>();
@@ -58,11 +58,11 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayStart = today.toISOString();
-      
+
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStart = tomorrow.toISOString();
-      
+
       // Check if message for today already exists - optimized query (select only needed fields)
       const { data: notification } = await supabase
         .from('daily_notifications')
@@ -327,7 +327,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
       try {
         const registration = await navigator.serviceWorker.ready;
         await registration.showNotification('✅ Thiết bị đã được duyệt', {
-          body: 'Thiết bị của bạn đã được admin xác nhận. Bạn có thể tiếp tục sử dụng ứng dụng! 🎉',
+          body: 'Thiết bị của bạn đã được Cậu ấy xác nhận. Bạn có thể tiếp tục sử dụng ứng dụng! 🎉',
           icon: '/icon-192x192.png',
           badge: '/icon-192x192.png',
           tag: 'device-approval',
@@ -354,16 +354,16 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('sender_role', 'admin');
-      
+
       if (error) throw error;
       const newCount = count || 0;
-      
+
       // Trigger glow effect if count increased
       if (newCount > prevMemoryCountRef.current) {
         setGlowEffect(true);
         setTimeout(() => setGlowEffect(false), 4000); // 4 seconds magical glow
       }
-      
+
       prevMemoryCountRef.current = newCount;
       setAdminMemoryCount(newCount);
     } catch (error) {
@@ -395,14 +395,14 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     loadAdminMemoryCount();
     const cleanup = setupRealtime();
     checkNotificationPermission();
-    
+
     return cleanup;
   }, [loadDailyMessage, loadAdminMemoryCount, setupRealtime, checkNotificationPermission]);
 
   if (showHistory) {
     return (
-      <ResponseHistoryView 
-        userId={userId} 
+      <ResponseHistoryView
+        userId={userId}
         onBack={handleBackFromHistory}
         cachedHistory={historyCache}
         onHistoryLoaded={setHistoryCache}
@@ -417,8 +417,12 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           ✨
         </div>
         <p className="text-romantic-glow/60 text-sm">
-          Đang tạo lời nhắn yêu thương...
+          <span>Đang tạo lời nhắn cho bạn</span>
+          <span className="animate-pulse">.</span>
+          <span className="animate-pulse delay-200">.</span>
+          <span className="animate-pulse delay-400">.</span>
         </p>
+        
       </div>
     );
   }
@@ -427,22 +431,40 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     <div className={`h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light relative overflow-hidden flex flex-col transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
       {/* Magical glow overlay effect */}
       {glowEffect && (
-        <div className="fixed inset-0 pointer-events-none z-50 animate-fade-out">
-          <div className="absolute inset-0" style={{
-            background: 'radial-gradient(circle at 50% 50%, rgba(46, 100, 254, 0.4) 0%, rgba(0, 212, 255, 0.3) 30%, rgba(168, 85, 247, 0.2) 60%, transparent 100%)',
-            animation: 'magical-overlay 4s ease-out forwards'
-          }} />
+        <div className="fixed inset-0 pointer-events-none z-[9999] dreamy-glow">
+          {/* MULTI-LAYER AURORA */}
+          <div className="aurora-layer layer-1" />
+          <div className="aurora-layer layer-2" />
+          <div className="aurora-layer layer-3" />
+
+          {/* Pulse */}
+          <div className="pulse-ring" />
+
+          {/* Sparkles */}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="sparkle"
+              style={{
+                left: `${50 + (Math.random() * 70 - 35)}%`,
+                top: `${50 + (Math.random() * 50 - 25)}%`,
+                animationDelay: `${i * 0.35}s`
+              }}
+            />
+          ))}
         </div>
       )}
+
+
       {/* Pull to refresh overlay */}
       {(isPulling || isRefreshing) && (
-        <div 
+        <div
           className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center justify-center transition-all duration-200"
           style={{
             height: `${Math.min(pullProgress * 100, 100)}px`,
             backgroundColor: 'rgba(10, 14, 26, 0.95)',
             backdropFilter: 'blur(10px)',
-              }}
+          }}
         >
           {isRefreshing ? (
             <div className="flex flex-col items-center gap-2">
@@ -451,7 +473,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <div 
+              <div
                 className="text-2xl transition-transform"
                 style={{ transform: `rotate(${pullProgress * 180}deg)` }}
               >
@@ -467,7 +489,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
       <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-romantic-glow/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-romantic-accent/10 rounded-full blur-3xl" />
-        </div>
+      </div>
 
       <div className="relative z-10 max-w-md mx-auto w-full h-full flex flex-col px-3 sm:px-4 py-2 sm:py-3">
         {/* Header with notification toggle and history button */}
@@ -476,7 +498,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             enabled={notificationsEnabled}
             onChange={setNotificationsEnabled}
           />
-          
+
           {/* Admin memory count and History button */}
           <div className="flex items-center gap-2">
             {/* Admin Memory Count */}
@@ -484,7 +506,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
               <span className="text-base sm:text-lg">✨</span>
               <span className="text-white text-xs sm:text-sm font-medium">{adminMemoryCount}</span>
             </div>
-            
+
             {/* History button */}
             <button
               onClick={handleViewHistory}

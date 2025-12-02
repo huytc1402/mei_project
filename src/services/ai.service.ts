@@ -187,7 +187,7 @@ VÍ DỤ SAI (TRÁNH):
 
     if (yesterdayReactions.length > 0) {
       const positiveEmojis = ['❤️', '😊', '👍', '🔥'];
-      const negativeEmojis = ['🥺', '😢', '😔'];
+      const negativeEmojis = ['🥺', '😢', '😔', '😭'];
       
       const hasPositive = yesterdayReactions.some(r => 
         positiveEmojis.includes(r.emoji)

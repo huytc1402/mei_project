@@ -14,7 +14,7 @@ export const MemoryButton = memo(function MemoryButton({ onMemory }: MemoryButto
   const popupTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const LOADING_DURATION = 1000; // 1.5 seconds
-  const COOLDOWN_DURATION = 1; // 3 seconds cooldown
+  const COOLDOWN_DURATION = 3; // 3 seconds cooldown
   const POPUP_DURATION = 3000; // 3 seconds popup
 
   useEffect(() => {
@@ -50,10 +50,10 @@ export const MemoryButton = memo(function MemoryButton({ onMemory }: MemoryButto
     try {
       // Show loading for 3 seconds
       await new Promise(resolve => setTimeout(resolve, LOADING_DURATION));
-      
+
       // Send memory
       await onMemory();
-      
+
       // Show success popup
       setShowSuccessPopup(true);
     } catch (error) {
@@ -66,63 +66,78 @@ export const MemoryButton = memo(function MemoryButton({ onMemory }: MemoryButto
   return (
     <>
       {/* Success Popup - Center, dark theme with backdrop */}
-        {showSuccessPopup && (
-          <>
-            {/* Backdrop */}
+      {showSuccessPopup && (
+        <>
+          {/* Backdrop */}
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] animate-fade-in" />
-            {/* Popup - Center using flexbox for better mobile support */}
+          {/* Popup - Center using flexbox for better mobile support */}
           <div className="fixed inset-0 flex items-center justify-center z-[70] p-4 animate-fade-in">
-              <div className="bg-gradient-to-br from-romantic-dark/95 via-romantic-soft/90 to-romantic-dark/95 backdrop-blur-md rounded-2xl px-4 sm:px-6 py-4 sm:py-5 border border-romantic-glow/30 shadow-2xl text-center w-[calc(100%-2rem)] max-w-[280px] mx-auto">
-                <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">
-                  ✨
-                </div>
-                <p className="text-white text-sm sm:text-base font-medium mb-1">
-                  Đã gửi {"Nhớ"} đến admin
-                </p>
-                <p className="text-romantic-glow/70 text-xs sm:text-sm">
-                  Tớ đã nhận được tín hiệu của cậu 💕
-                </p>
+            <div className="bg-gradient-to-br from-romantic-dark/95 via-romantic-soft/90 to-romantic-dark/95 backdrop-blur-md rounded-2xl px-4 sm:px-6 py-4 sm:py-5 border border-romantic-glow/30 shadow-2xl text-center w-[calc(100%-2rem)] max-w-[280px] mx-auto">
+              <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">
+                ✨
               </div>
+              <p className="text-white text-sm sm:text-base font-medium mb-1">
+                Đã gửi {"Nhớ"} đến Cậu ấy!
+              </p>
+              <p className="text-romantic-glow/70 text-xs sm:text-sm">
+                Tớ đã nhận được tín hiệu của cậu 💕
+              </p>
             </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
 
       {/* Memory Button - Center, rectangular */}
+
+      {/* Memory Button - Style #1: Clean Loading State */}
       <div className="flex justify-center z-40">
         <button
           onClick={handleMemoryClick}
-          disabled={isSending || cooldown > 0}
-          className="relative px-8 sm:px-10 py-2.5 sm:py-3 bg-gradient-to-r from-romantic-glow via-romantic-dark to-romantic-soft rounded-lg sm:rounded-xl flex items-center justify-center gap-2 text-white text-sm sm:text-base font-medium shadow-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-xl hover:shadow-romantic-glow/30"
+          disabled={isSending}
+          className="relative px-8 sm:px-10 py-2.5 sm:py-3 
+          bg-gradient-to-r from-romantic-accent/20 via-romantic-glow to-romantic-accent/10 
+          rounded-lg sm:rounded-xl flex items-center justify-center gap-2 
+          text-white text-sm sm:text-base font-medium shadow-lg 
+          disabled:opacity-50 disabled:cursor-not-allowed transition-all 
+          hover:shadow-xl hover:shadow-romantic-glow/30 overflow-hidden"
           style={{
             backgroundSize: '200% 200%',
-            animation: !(isSending || cooldown > 0) ? 'gradient-shift 4s ease infinite' : 'none',
+            animation: !isSending ? 'gradient-shift 4s ease infinite':'none',
           }}
         >
-          {/* Loading spinner */}
+          {/* Icon (normal mode) */}
+          {!isSending && (
+            <span className="text-2xl">
+              ✨
+            </span>
+          )}
+
+          {/* Loading State */}
           {isSending && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg sm:rounded-xl">
-              <div className="text-xl sm:text-2xl animate-spin">
-                💫
-              </div>
+            <div className="flex items-center gap-2">
+              {/* Loader ✨ xoay */}
+              <span className="text-2xl animate-spin">
+                ✨
+              </span>
+
+              {/* Cooldown hoặc chữ "Đang gửi..." */}
+              
+                <span className="text-xs sm:text-sm opacity-90">
+                  {cooldown}s...
+                </span>
+              
             </div>
           )}
 
-          {/* Cooldown overlay */}
-          {cooldown > 0 && !isSending && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg sm:rounded-xl backdrop-blur-sm">
-              <span className="text-xs sm:text-sm font-bold">{cooldown}s</span>
-            </div>
-          )}
-
-          {/* Icon and Text */}
-          {!isSending && cooldown === 0 && (
-            <>
-              <span className="relative z-10 text-lg sm:text-xl">✨</span>
-              <span className="relative z-10">Nhớ</span>
-            </>
+          {/* Normal label */}
+          {!isSending && (
+            <span className="relative z-10 flex items-center justify-center">
+              Nhớ Cậu
+            </span>
           )}
         </button>
       </div>
+
     </>
   );
 });

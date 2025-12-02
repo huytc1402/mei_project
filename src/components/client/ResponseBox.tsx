@@ -5,8 +5,8 @@ import { EmojiPickerComponent } from './EmojiPicker';
 
 // Simplified flying emoji component - CSS animation instead of framer-motion
 // Memoized to prevent unnecessary re-renders
-const FlyingEmoji = memo(({ emoji, onComplete, startX = 0, startY = 0 }: { 
-  emoji: string; 
+const FlyingEmoji = memo(({ emoji, onComplete, startX = 0, startY = 0 }: {
+  emoji: string;
   onComplete: () => void;
   startX?: number;
   startY?: number;
@@ -15,7 +15,7 @@ const FlyingEmoji = memo(({ emoji, onComplete, startX = 0, startY = 0 }: {
   const randomY = useMemo(() => (Math.random() - 0.5) * 80, []);
   const endX = useMemo(() => startX + randomX, [startX, randomX]);
   const endY = useMemo(() => startY + randomY - 300, [startY, randomY]);
-  
+
   return (
     <div
       className="fixed pointer-events-none z-50"
@@ -77,16 +77,16 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
   useEffect(() => {
     let mounted = true;
     let abortController: AbortController | null = null;
-    
+
     async function generateSuggestions() {
       if (!currentMessage?.content || !userId) return;
-      
+
       // Cancel previous request if still pending
       if (abortController) {
         abortController.abort();
       }
       abortController = new AbortController();
-      
+
       setLoadingSuggestions(true);
       try {
         // Add timestamp to ensure different results on each reload
@@ -97,7 +97,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
             'Authorization': `Bearer ${userId}`, // Simple auth
             'x-user-id': userId,
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             message: currentMessage.content,
             // Add random seed to get different results
             seed: Date.now(),
@@ -111,11 +111,11 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
           // Take only 2 short suggestions, shuffle to get variety
           const filtered = result.replies
             .filter((r: string) => r && r.length > 0 && r.length <= 50);
-          
+
           // Shuffle and take 2 random ones
           const shuffled = [...filtered].sort(() => Math.random() - 0.5);
           const shortSuggestions = shuffled.slice(0, 2);
-          
+
           setSuggestions(shortSuggestions);
           setHasGeneratedSuggestions(true);
         }
@@ -147,7 +147,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
         setLoadingSuggestions(false);
       }
     }, 300); // 300ms debounce
-    
+
     return () => {
       mounted = false;
       clearTimeout(timeoutId);
@@ -162,7 +162,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
   const handleEmojiClick = useCallback((emoji: string, event?: React.MouseEvent<HTMLButtonElement>) => {
     // Send reaction
     onReaction(emoji);
-    
+
     // Get button position for emoji to fly from
     let startX = 0;
     let startY = 0;
@@ -171,7 +171,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
       startX = rect.left + rect.width / 2 - window.innerWidth / 2;
       startY = rect.top + rect.height / 2 - window.innerHeight / 2;
     }
-    
+
     // Reduced flying emoji effects (3-5 emojis instead of 10-15)
     const emojiCount = 3 + Math.floor(Math.random() * 3); // 3-5 emojis
     const newEmojis = Array.from({ length: emojiCount }, () => {
@@ -186,14 +186,14 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
     if (messageContent && !sendingMessage) {
       setSendingMessage(true);
       try {
-      await onMessage(messageContent);
-      setText('');
-      // Clear suggestions after sending
-      setSuggestions([]);
-      setHasGeneratedSuggestions(false);
-      setLoadingSuggestions(false);
-      // Show success popup
-      setShowSuccessPopup(true);
+        await onMessage(messageContent);
+        setText('');
+        // Clear suggestions after sending
+        setSuggestions([]);
+        setHasGeneratedSuggestions(false);
+        setLoadingSuggestions(false);
+        // Show success popup
+        setShowSuccessPopup(true);
       } catch (error) {
         console.error('Error sending message:', error);
       } finally {
@@ -204,7 +204,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
 
   const handleSuggestionClick = useCallback(async (suggestion: string) => {
     if (loadingSuggestion) return; // Prevent double click
-    
+
     setLoadingSuggestion(suggestion);
     try {
       await handleSendText(suggestion);
@@ -231,7 +231,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
                 ✨
               </div>
               <p className="text-white text-sm sm:text-base font-medium mb-1">
-                Đã gửi tin nhắn đến admin
+                Đã gửi đến Cậu ấy!
               </p>
               <p className="text-romantic-glow/70 text-xs sm:text-sm">
                 Tớ đã nhận được tin nhắn của cậu 💕
@@ -293,7 +293,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
                   )}
                 </button>
               </div>
-              
+
               {/* AI Suggestions - Compact, below textfield */}
               {(loadingSuggestions || suggestions.length > 0) && (
                 <div className="mt-2 space-y-1.5">
@@ -337,16 +337,16 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
 
             {/* Emoji Reactions Section - Single line, fit all */}
             <div>
-              {/* <p className="text-romantic-glow/80 text-xs mb-2 text-center font-medium">
+              <p className="text-romantic-glow/80 text-xs mb-2 text-center font-medium">
                 Phản hồi nhanh
-              </p> */}
+              </p>
               <div className="flex gap-1 sm:gap-1.5 justify-center items-center flex-wrap">
                 {DEFAULT_EMOJIS.map((emoji) => (
                   <button
                     key={emoji}
                     id={`emoji-${emoji}`}
                     onClick={(e) => handleEmojiClick(emoji, e)}
-                    className="text-lg sm:text-xl transition-transform hover:scale-110 cursor-pointer p-0.5 sm:p-1 rounded-md sm:rounded-lg hover:bg-romantic-light/30"
+                    className="text-lg sm:text-xl transition-transform hover:scale-200 cursor-pointer p-1 sm:p-1 rounded-md sm:rounded-lg hover:bg-romantic-light/30"
                   >
                     {emoji}
                   </button>

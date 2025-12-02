@@ -14,7 +14,7 @@ export function EmojiReactions({ onReaction }: EmojiReactionsProps) {
 
   function handleEmojiClick(emoji: string) {
     onReaction(emoji);
-    
+
     // Shake animation
     const element = document.getElementById(`emoji-${emoji}`);
     if (element) {
@@ -35,11 +35,8 @@ export function EmojiReactions({ onReaction }: EmojiReactionsProps) {
   const allEmojis = [...DEFAULT_EMOJIS, ...customEmojis];
 
   return (
-    <div className="bg-romantic-soft/30 rounded-2xl p-4 border border-romantic-light/20">
-      {/* <p className="text-romantic-glow/70 text-sm mb-3 text-center">
-        Phản hồi nhanh
-      </p> */}
-      <div className="flex flex-wrap gap-3 justify-center">
+    <div className="">
+      <div className="flex flex-wrap gap-3 justify-between">
         {allEmojis.map((emoji) => (
           <button
             key={emoji}

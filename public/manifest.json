@@ -1,7 +1,6 @@
 {
-  "name": "Mei - Kết nối yêu thương",
-  "short_name": "Mei",
-  "description": "Ứng dụng tình cảm riêng tư dành cho bạn",
+  "name": "mei project",
+  "short_name": "mei",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a2e",

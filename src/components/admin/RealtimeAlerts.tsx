@@ -66,7 +66,6 @@ export function RealtimeAlerts({ data }: RealtimeAlertsProps) {
               <div className="flex items-center space-x-3">
                 <span className="text-4xl">✨</span>
                 <div className="flex-1">
-                  <p className="text-white text-sm font-medium">Đom đóm sáng!</p>
                   <p className="text-romantic-glow/80 text-sm">
                     Cậu ấy đã nhấn Nhớ
                   </p>
