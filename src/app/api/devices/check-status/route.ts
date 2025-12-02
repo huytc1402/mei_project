@@ -32,12 +32,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Admin: Always auto-approved, no need to check device status
+    // Admin: Always auto-approved, but check if device exists
     if (role === 'admin') {
+      const supabase = createAdminClient();
+      const { data: users } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'admin')
+        .limit(1);
+
+      if (users && users.length > 0) {
+        const userId = (users[0] as any).id;
+        const { data: devices } = await supabase
+          .from('devices')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('fingerprint', fingerprint)
+          .limit(1);
+
+        return NextResponse.json({
+          success: true,
+          isApproved: true,
+          needsApproval: false,
+          hasDevice: devices && devices.length > 0,
+          isFirstTime: !devices || devices.length === 0,
+        });
+      }
+
       return NextResponse.json({
         success: true,
         isApproved: true,
         needsApproval: false,
+        hasDevice: false,
+        isFirstTime: true,
       });
     }
 
@@ -55,6 +82,8 @@ export async function POST(request: NextRequest) {
         success: true,
         isApproved: true, // New user, no device yet
         needsApproval: false,
+        hasDevice: false, // No device exists yet
+        isFirstTime: true, // First time using this token
       });
     }
 
@@ -84,6 +113,8 @@ export async function POST(request: NextRequest) {
           success: true,
           isApproved: false,
           needsApproval: true,
+          hasDevice: false, // No device with this fingerprint
+          isFirstTime: true, // First time on this device
         });
       } else {
         // First device - will be auto-approved
@@ -91,6 +122,8 @@ export async function POST(request: NextRequest) {
           success: true,
           isApproved: true,
           needsApproval: false,
+          hasDevice: false, // No device with this fingerprint yet
+          isFirstTime: true, // First time on this device
         });
       }
     }
@@ -100,6 +133,7 @@ export async function POST(request: NextRequest) {
       success: true,
       isApproved: device.is_active === true,
       needsApproval: device.is_active === false,
+      hasDevice: true, // Device exists
     });
   } catch (error: any) {
     console.error('Check device status error:', error);

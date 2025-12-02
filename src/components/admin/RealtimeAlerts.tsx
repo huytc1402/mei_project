@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Message, Reaction, Memory } from '@/types';
 import { format } from 'date-fns';
 import vi from 'date-fns/locale/vi';
@@ -28,6 +29,10 @@ export function RealtimeAlerts({ data }: RealtimeAlertsProps) {
   const latestMessage = data.messages[0];
   // Only show memories from client (not admin)
   const latestMemory = data.memories.find(m => m.senderRole === 'client');
+  const [isMessageExpanded, setIsMessageExpanded] = useState(false);
+  
+  const MAX_LENGTH = 150; // Approximate 2-3 lines
+  const shouldTruncate = latestMessage && latestMessage.content.length > MAX_LENGTH;
 
   return (
     <div className="space-y-4">
@@ -53,7 +58,21 @@ export function RealtimeAlerts({ data }: RealtimeAlertsProps) {
             <div className="bg-romantic-soft/30 rounded-lg p-4 border border-romantic-light/20 animate-fade-in">
               <div className="space-y-2">
                 <p className="text-white text-sm font-medium">Tin nhắn mới</p>
-                <p className="text-white/80 text-sm">{latestMessage.content}</p>
+                <div>
+                  <p className={`text-white/80 text-sm leading-relaxed ${
+                    !isMessageExpanded && shouldTruncate ? 'line-clamp-3' : ''
+                  }`}>
+                    {latestMessage.content}
+                  </p>
+                  {shouldTruncate && (
+                    <button
+                      onClick={() => setIsMessageExpanded(!isMessageExpanded)}
+                      className="mt-2 text-romantic-glow/80 text-xs hover:text-romantic-glow transition-colors"
+                    >
+                      {isMessageExpanded ? '▼ Thu gọn' : '▶ Xem thêm'}
+                    </button>
+                  )}
+                </div>
                 <p className="text-romantic-glow/60 text-xs">
                   {formatDate(latestMessage.createdAt)}
                 </p>

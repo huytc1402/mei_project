@@ -193,7 +193,14 @@ html {
   /* Chrome, Safari and Opera */
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Optimized */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(46, 100, 254, 0.5) rgba(15, 52, 96, 0.3);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

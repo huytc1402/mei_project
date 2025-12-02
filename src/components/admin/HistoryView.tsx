@@ -373,13 +373,18 @@ export function HistoryView({ data }: HistoryViewProps) {
         </div>
       </div>
 
-      {/* Grouped Items by Date */}
-      <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar" style={{
-        overscrollBehavior: 'contain',
-        WebkitOverflowScrolling: 'touch',
-        scrollBehavior: 'smooth',
-        willChange: 'scroll-position'
-      }}>
+      {/* Grouped Items by Date - Optimized scrolling */}
+      <div 
+        className="space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar"
+        style={{
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+          scrollBehavior: 'smooth',
+          paddingTop: '0.5rem',
+          paddingBottom: '4rem', // Extra padding at bottom for easier scrolling
+          scrollPaddingTop: '1rem',
+        }}
+      >
         {groupedItems.length === 0 ? (
           <p className="text-romantic-glow/60 text-sm text-center py-8">
             Chưa có tương tác nào
@@ -387,12 +392,6 @@ export function HistoryView({ data }: HistoryViewProps) {
         ) : (
           groupedItems.map(([dateKey, items]) => {
             const dailyMessage = dailyMessages.get(dateKey);
-            // Debug log
-            if (dailyMessage) {
-              console.log(`✅ Found daily message for ${dateKey}: ${dailyMessage.substring(0, 50)}...`);
-            } else {
-              console.log(`❌ No daily message for ${dateKey} (available keys: ${Array.from(dailyMessages.keys()).join(', ')})`);
-            }
             return (
               <div key={dateKey} className="space-y-3">
                 {/* Date Header */}

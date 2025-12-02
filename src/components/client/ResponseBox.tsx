@@ -43,9 +43,11 @@ interface ResponseBoxProps {
   onViewHistory?: () => void;
   userId?: string;
   currentMessage?: { content: string } | null;
+  onSuggestionsCache?: (suggestions: string[]) => void; // Callback to cache suggestions
+  cachedSuggestions?: string[]; // Cached suggestions from parent
 }
 
-export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, onMemory, onViewHistory, userId, currentMessage }: ResponseBoxProps) {
+export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, onMemory, onViewHistory, userId, currentMessage, onSuggestionsCache, cachedSuggestions }: ResponseBoxProps) {
   const [text, setText] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [flyingEmojis, setFlyingEmojis] = useState<Array<{ id: string; emoji: string; startX?: number; startY?: number }>>([]);
@@ -54,6 +56,14 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [hasGeneratedSuggestions, setHasGeneratedSuggestions] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  // Initialize suggestions from cache if provided
+  useEffect(() => {
+    if (cachedSuggestions && cachedSuggestions.length > 0) {
+      setSuggestions(cachedSuggestions);
+      setHasGeneratedSuggestions(true);
+      setLoadingSuggestions(false);
+    }
+  }, [cachedSuggestions]);
   const emojiIdCounter = useRef(0);
   const popupTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -72,7 +82,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
     };
   }, [showSuccessPopup]);
 
-  // Generate suggestions when message is available - always generate fresh on mount/reload
+  // Generate suggestions when message is available - use cache if available
   // Optimized with debouncing and request deduplication
   useEffect(() => {
     let mounted = true;
@@ -80,6 +90,13 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
 
     async function generateSuggestions() {
       if (!currentMessage?.content || !userId) return;
+
+      // If we have cached suggestions from prop, use them first
+      if (cachedSuggestions && cachedSuggestions.length > 0) {
+        setSuggestions(cachedSuggestions);
+        setHasGeneratedSuggestions(true);
+        return;
+      }
 
       // Cancel previous request if still pending
       if (abortController) {
@@ -136,9 +153,11 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
     const timeoutId = setTimeout(() => {
       // Always generate fresh suggestions when message is available
       if (currentMessage?.content && userId) {
-        // Reset state first
-        setHasGeneratedSuggestions(false);
-        setSuggestions([]);
+        // Only reset if we don't have cached suggestions from prop
+        if (!cachedSuggestions || cachedSuggestions.length === 0) {
+          setHasGeneratedSuggestions(false);
+          setSuggestions([]);
+        }
         generateSuggestions();
       } else {
         // Reset when message changes
@@ -155,7 +174,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
         abortController.abort();
       }
     };
-  }, [currentMessage?.content, userId]);
+  }, [currentMessage?.content, userId, cachedSuggestions]);
 
   const DEFAULT_EMOJIS = useMemo(() => ['❤️', '😊', '🥺', '👍', '🔥', '💕', '😌', '🌙'], []);
 
@@ -188,19 +207,57 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
       try {
         await onMessage(messageContent);
         setText('');
+        // Cache current suggestions before clearing (for when user comes back from history)
+        if (suggestions.length > 0 && onSuggestionsCache) {
+          onSuggestionsCache(suggestions);
+        }
         // Clear suggestions after sending
         setSuggestions([]);
         setHasGeneratedSuggestions(false);
         setLoadingSuggestions(false);
         // Show success popup
         setShowSuccessPopup(true);
+        
+        // Generate new suggestions after successful send
+        // Wait a bit for the popup to show, then generate new suggestions
+        setTimeout(() => {
+          if (currentMessage?.content && userId) {
+            setLoadingSuggestions(true);
+            // Trigger new suggestion generation
+            fetch('/api/ai/quick-replies', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userId}`,
+                'x-user-id': userId,
+              },
+              body: JSON.stringify({
+                message: currentMessage.content,
+                seed: Date.now(),
+              }),
+            })
+              .then(res => res.json())
+              .then(result => {
+                if (result.success && result.replies && Array.isArray(result.replies)) {
+                  const filtered = result.replies
+                    .filter((r: string) => r && r.length > 0 && r.length <= 50);
+                  const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+                  const shortSuggestions = shuffled.slice(0, 2);
+                  setSuggestions(shortSuggestions);
+                  setHasGeneratedSuggestions(true);
+                }
+              })
+              .catch(err => console.error('Generate new suggestions error:', err))
+              .finally(() => setLoadingSuggestions(false));
+          }
+        }, 500); // Wait 500ms after sending
       } catch (error) {
         console.error('Error sending message:', error);
       } finally {
         setSendingMessage(false);
       }
     }
-  }, [text, onMessage, sendingMessage]);
+  }, [text, onMessage, sendingMessage, currentMessage, userId]);
 
   const handleSuggestionClick = useCallback(async (suggestion: string) => {
     if (loadingSuggestion) return; // Prevent double click
@@ -252,19 +309,15 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
         />
       ))}
 
-      <div className="space-y-3">
+      <div className=" space-y-3">
         {/* Combined Response Box - Compact and clean */}
-        <div className="relative bg-gradient-to-br from-romantic-soft/50 to-romantic-light/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-romantic-glow/30 backdrop-blur-sm shadow-lg"
+        <div className=" relative bg-gradient-to-br from-romantic-soft/50 to-romantic-light/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-romantic-glow/30 backdrop-blur-sm shadow-lg"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-romantic-glow/10 rounded-full blur-3xl" />
           <div className="relative z-10 space-y-3">
             {/* Text Input Section */}
             <div>
-              {/* <div className="flex items-center space-x-2 mb-2">
-                <span className="text-lg">💬</span>
-                <p className="text-romantic-glow/80 text-xs font-medium">Gửi tin nhắn</p>
-              </div> */}
-              <div className="flex space-x-2">
+              <div className=" flex space-x-5">
                 <input
                   type="text"
                   value={text}
@@ -293,7 +346,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
                   )}
                 </button>
               </div>
-
+              
               {/* AI Suggestions - Compact, below textfield */}
               {(loadingSuggestions || suggestions.length > 0) && (
                 <div className="mt-2 space-y-1.5">
@@ -337,9 +390,7 @@ export const ResponseBox = memo(function ResponseBox({ onReaction, onMessage, on
 
             {/* Emoji Reactions Section - Single line, fit all */}
             <div>
-              <p className="text-romantic-glow/80 text-xs mb-2 text-center font-medium">
-                Phản hồi nhanh
-              </p>
+              
               <div className="flex gap-1 sm:gap-1.5 justify-center items-center flex-wrap">
                 {DEFAULT_EMOJIS.map((emoji) => (
                   <button

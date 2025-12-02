@@ -36,6 +36,7 @@ export class AuthService {
         localStorage.setItem('user_id', result.userId);
         localStorage.setItem('user_role', result.actualRole || result.role);
         localStorage.setItem('device_fingerprint', fingerprint);
+        localStorage.setItem('token', token); // Store token to check device status later
         
         return {
           success: true,
@@ -56,6 +57,7 @@ export class AuthService {
     localStorage.removeItem('user_id');
     localStorage.removeItem('user_role');
     localStorage.removeItem('device_fingerprint');
+    localStorage.removeItem('token');
   }
 
   async getCurrentUser(): Promise<{ id: string; role: UserRole } | null> {

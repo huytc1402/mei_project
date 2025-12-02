@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (action !== 'approve' && action !== 'deny') {
+    if (action !== 'approve' && action !== 'deny' && action !== 'revoke') {
       return NextResponse.json(
         { success: false, error: 'Invalid action' },
         { status: 400 }
@@ -74,6 +74,40 @@ export async function POST(request: NextRequest) {
 
         // Trigger notification via realtime subscription (client listens to devices table)
         // The client will detect the is_active change and show notification
+      }
+
+      return NextResponse.json({ success: true });
+    } else if (action === 'revoke') {
+      // Revoke device - set is_active to false
+      const { error } = await (supabase
+        .from('devices') as any)
+        .update({ is_active: false })
+        .eq('id', deviceId);
+
+      if (error) throw error;
+
+      // Get device info for notifications
+      const { data: device } = await supabase
+        .from('devices')
+        .select('*, user_id')
+        .eq('id', deviceId)
+        .single();
+
+      if (device) {
+        const deviceData = device as any;
+        // Send Telegram notification
+        try {
+          const { TelegramService } = await import('@/services/telegram.service');
+          const telegram = new TelegramService();
+          await telegram.sendAlert(
+            `🔒 Thiết bị đã bị thu hồi quyền truy cập!\n\n` +
+            `Fingerprint: ${deviceData.fingerprint.substring(0, 24)}...\n` +
+            `User Agent: ${deviceData.user_agent.substring(0, 50)}...\n` +
+            `⏰ ${new Date().toLocaleString('vi-VN')}`
+          );
+        } catch (telegramError) {
+          console.error('Telegram notification error:', telegramError);
+        }
       }
 
       return NextResponse.json({ success: true });

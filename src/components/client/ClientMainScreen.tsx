@@ -21,7 +21,9 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [adminMemoryCount, setAdminMemoryCount] = useState(0);
   const [historyCache, setHistoryCache] = useState<any[] | null>(null); // Cache history data
+  const [suggestionsCache, setSuggestionsCache] = useState<string[]>([]); // Cache suggestions when navigating to history
   const [glowEffect, setGlowEffect] = useState(false); // For glow effect when admin sends memory
+  const [showMemoryTooltip, setShowMemoryTooltip] = useState(false); // Tooltip for memory count
   const prevMemoryCountRef = useRef(0); // Track previous count for glow effect
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
@@ -205,7 +207,11 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
 
   const handleBackFromHistory = useCallback(() => {
     setShowHistory(false);
-    // Reset response box state but keep current message
+    // Keep suggestions cached - they will be restored by ResponseBox
+  }, []);
+
+  const handleSuggestionsCache = useCallback((suggestions: string[]) => {
+    setSuggestionsCache(suggestions);
   }, []);
 
   const setupRealtime = useCallback(() => {
@@ -225,7 +231,6 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           filter: `user_id=eq.${userId}`,
         },
         (payload: { new: any }) => {
-          console.log('📨 Client: New daily notification received via realtime:', payload.new);
           const notification = payload.new as any;
           setCurrentMessage({
             id: notification.id,
@@ -245,19 +250,15 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           filter: `user_id=eq.${userId}`,
         },
         (payload: { new: any }) => {
-          console.log('✨ Client: New memory received via realtime:', payload.new);
           const memory = payload.new as any;
           // Check if it's from admin
           if (memory.sender_role === 'admin' && memory.user_id === userId) {
-            console.log('📢 Client: Admin memory detected, showing notification');
             // Show notification to client
             showAdminMemoryNotificationRef.current?.();
             // Update admin memory count immediately
             if (loadAdminMemoryCountRef.current) {
               loadAdminMemoryCountRef.current();
             }
-          } else {
-            console.log('📝 Client: Memory is not from admin or not for this user');
           }
         }
       )
@@ -270,26 +271,101 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           filter: `user_id=eq.${userId}`,
         },
         (payload: { new: any, old: any }) => {
-          console.log('🔄 Client: Device updated via realtime:', payload.new);
           const device = payload.new as any;
           const oldDevice = payload.old as any;
           // Check if device was just approved (is_active changed from false to true)
           if (oldDevice && oldDevice.is_active === false && device.is_active === true) {
-            console.log('✅ Client: Device approved, showing notification');
             showDeviceApprovalNotificationRef.current?.();
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'reactions',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: { new: any }) => {
+          const newReaction = payload.new as any;
+          const newItem = {
+            id: newReaction.id,
+            type: 'reaction' as const,
+            emoji: newReaction.emoji,
+            createdAt: newReaction.created_at,
+          };
+          
+          // Optimized update - check duplicate first
+          setHistoryCache(prev => {
+            if (!prev) return [newItem];
+            const exists = prev.some(item => item.id === newItem.id);
+            if (exists) return prev;
+            // Use functional update to avoid stale closure
+            return [newItem, ...prev].sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: { new: any }) => {
+          const newMessage = payload.new as any;
+          const newItem = {
+            id: newMessage.id,
+            type: 'message' as const,
+            content: newMessage.content,
+            createdAt: newMessage.created_at,
+          };
+          
+          // Optimized update
+          setHistoryCache(prev => {
+            if (!prev) return [newItem];
+            const exists = prev.some(item => item.id === newItem.id);
+            if (exists) return prev;
+            return [newItem, ...prev].sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'memories',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: { new: any }) => {
+          const newMemory = payload.new as any;
+          const newItem = {
+            id: newMemory.id,
+            type: 'memory' as const,
+            createdAt: newMemory.created_at,
+            senderRole: newMemory.sender_role,
+          };
+          
+          // Batch update history cache
+          setHistoryCache(prev => {
+            if (!prev) return [newItem];
+            if (prev.some(item => item.id === newItem.id)) return prev;
+            return [newItem, ...prev].sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          });
+        }
+      )
       .subscribe((status) => {
-        console.log('📡 Client realtime subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Client: Successfully subscribed to realtime updates (notifications, memories, devices)');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Client: Realtime channel error - check Supabase realtime configuration');
-        } else if (status === 'TIMED_OUT') {
-          console.warn('⏰ Client: Realtime subscription timed out');
-        } else if (status === 'CLOSED') {
-          console.warn('🔒 Client: Realtime channel closed');
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Client: Realtime channel error');
         }
       });
 
@@ -456,30 +532,35 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
       )}
 
 
-      {/* Pull to refresh overlay */}
+      {/* Pull to refresh overlay - Simplified */}
       {(isPulling || isRefreshing) && (
         <div
-          className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center justify-center transition-all duration-200"
+          className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center justify-center transition-all duration-300"
           style={{
-            height: `${Math.min(pullProgress * 100, 100)}px`,
-            backgroundColor: 'rgba(10, 14, 26, 0.95)',
-            backdropFilter: 'blur(10px)',
+            height: `${Math.min(pullProgress * 80, 80)}px`,
+            backgroundColor: 'rgba(10, 14, 26, 0.9)',
+            backdropFilter: 'blur(8px)',
           }}
         >
           {isRefreshing ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="text-2xl animate-spin">✨</div>
-              <p className="text-romantic-glow/80 text-xs">Đang tải lại...</p>
+              <div className="text-3xl animate-spin">✨</div>
+              <p className="text-romantic-glow/90 text-sm font-medium">Đang tải lại...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <div
-                className="text-2xl transition-transform"
-                style={{ transform: `rotate(${pullProgress * 180}deg)` }}
+                className="text-3xl transition-transform duration-200"
+                style={{ 
+                  transform: `translateY(${pullProgress * 10}px) rotate(${pullProgress >= 1 ? 180 : pullProgress * 180}deg)`,
+                  opacity: pullProgress
+                }}
               >
                 ⬇️
               </div>
-              <p className="text-romantic-glow/60 text-xs">Kéo để làm mới</p>
+              <p className="text-romantic-glow/70 text-xs" style={{ opacity: pullProgress }}>
+                {pullProgress >= 1 ? 'Thả để làm mới' : 'Kéo xuống để làm mới'}
+              </p>
             </div>
           )}
         </div>
@@ -501,10 +582,34 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
 
           {/* Admin memory count and History button */}
           <div className="flex items-center gap-2">
-            {/* Admin Memory Count */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-romantic-soft/40 backdrop-blur-sm rounded-lg border border-romantic-glow/30">
-              <span className="text-base sm:text-lg">✨</span>
-              <span className="text-white text-xs sm:text-sm font-medium">{adminMemoryCount}</span>
+            {/* Admin Memory Count with Click to Show Info */}
+            <div className="relative">
+              <button
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-romantic-soft/40 backdrop-blur-sm rounded-lg border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors active:scale-95"
+                onClick={() => setShowMemoryTooltip(!showMemoryTooltip)}
+              >
+                <span className="text-base sm:text-lg">✨</span>
+                <span className="text-white text-xs sm:text-sm font-medium">{adminMemoryCount}</span>
+                {!showMemoryTooltip && (
+                  <span className="text-romantic-glow/60 text-[10px] ml-1">ℹ️</span>
+                )}
+              </button>
+              {showMemoryTooltip && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-romantic-dark/95 backdrop-blur-md rounded-lg p-3 border border-romantic-glow/30 shadow-xl z-50 animate-fade-in">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-white text-xs font-medium">Giải thích</p>
+                    <button
+                      onClick={() => setShowMemoryTooltip(false)}
+                      className="text-romantic-glow/60 hover:text-romantic-glow text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p className="text-white text-xs leading-relaxed">
+                    Số lần Cậu ấy đã nhấn {"Nhớ"} cho bạn. Mỗi lần nhấn là một lời nhắn yêu thương 💕
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* History button */}
@@ -537,6 +642,8 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
                 onViewHistory={handleViewHistory}
                 userId={userId}
                 currentMessage={currentMessage}
+                onSuggestionsCache={handleSuggestionsCache}
+                cachedSuggestions={suggestionsCache}
               />
             </div>
           )}

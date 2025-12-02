@@ -214,6 +214,33 @@ export function DeviceApproval() {
     }
   }
 
+  async function revokeDevice(deviceId: string) {
+    if (!confirm('Bạn có chắc muốn thu hồi quyền truy cập của thiết bị này? Thiết bị sẽ cần được xác nhận lại để sử dụng.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/devices/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ deviceId, action: 'revoke' }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        await loadDevices();
+        alert('Đã thu hồi quyền truy cập thiết bị thành công');
+      } else {
+        alert('Lỗi: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Revoke device error:', error);
+      alert('Có lỗi xảy ra khi thu hồi quyền truy cập');
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-romantic-soft/40 rounded-2xl p-6 border border-romantic-light/30">
@@ -321,7 +348,16 @@ export function DeviceApproval() {
                       Lần cuối: {format(new Date(device.last_seen), 'PPp', { locale: vi })}
                     </p>
                   </div>
-                  <span className="text-green-400 text-xs">✓ Đã xác nhận</span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="text-green-400 text-xs">✓ Đã xác nhận</span>
+                    <button
+                      onClick={() => revokeDevice(device.id)}
+                      className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition-colors"
+                      title="Thu hồi quyền truy cập"
+                    >
+                      🔒 Thu hồi
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
