@@ -17,7 +17,7 @@ export function SendMemory() {
 
     // Setup realtime subscription for memories
     const channel = supabase
-      .channel('admin-memory-count')
+      .channel(`admin-memory-count-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -29,14 +29,11 @@ export function SendMemory() {
           const memory = payload.new as any;
           // Only update if it's from client
           if (memory.sender_role === 'client') {
-            console.log('📢 Admin: Client memory detected, updating count');
             loadClientMemoryCount();
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Admin memory count subscription status:', status);
-      });
+      .subscribe();
 
     channelRef.current = channel;
 
@@ -72,11 +69,16 @@ export function SendMemory() {
 
       if (clientUsers && clientUsers.length > 0) {
         const clientId = (clientUsers[0] as any).id;
-        const { count } = await supabase
+        const { count, error } = await supabase
           .from('memories')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', clientId)
           .eq('sender_role', 'client');
+
+        if (error) {
+          console.error('Load client memory count error:', error);
+          return;
+        }
 
         setClientMemoryCount(count || 0);
       }

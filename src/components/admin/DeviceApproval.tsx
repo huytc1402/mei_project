@@ -254,7 +254,7 @@ export function DeviceApproval() {
   return (
     <div className="space-y-6">
       {/* Manual Refresh Button */}
-      <div className="flex justify-end">
+      {/* <div className="flex justify-end">
         <button
           onClick={() => {
             console.log('Manual refresh triggered');
@@ -264,7 +264,7 @@ export function DeviceApproval() {
         >
           🔄 Làm mới
         </button>
-      </div>
+      </div> */}
 
       {/* Pending Devices */}
       <div className="bg-romantic-soft/40 rounded-2xl p-6 border border-romantic-light/30">

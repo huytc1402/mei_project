@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { generateFingerprint } from '@/lib/utils/device';
 
@@ -14,8 +14,20 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(false);
   const [waitingForApproval, setWaitingForApproval] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check if user was blocked
+  useEffect(() => {
+    const blocked = searchParams.get('blocked');
+    if (blocked === 'true') {
+      setIsBlocked(true);
+      // Clear the query param after showing message
+      router.replace('/welcome', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // Check device status when token changes (only for client)
   useEffect(() => {
@@ -125,9 +137,10 @@ export default function WelcomePage() {
         // Navigate immediately without waiting
         router.push(role === 'admin' ? '/admin' : '/client');
       } else {
-        // Check if it's a device approval error
-        if (result.error?.includes('chờ xác nhận')) {
+        // Check if it's a device approval error or revoked device
+        if (result.error?.includes('chờ xác nhận') || result.error?.includes('thu hồi')) {
           setWaitingForApproval(true);
+          setIsBlocked(result.error?.includes('thu hồi') || false);
         }
         setError(result.error || 'Token không hợp lệ');
         setLoading(false);
@@ -161,6 +174,18 @@ export default function WelcomePage() {
               disabled={loading}
             />
           </div>
+
+          {isBlocked && (
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-center animate-fade-in mb-4">
+              <div className="text-3xl mb-2">🔒</div>
+              <p className="text-red-400 text-sm font-medium mb-1">
+                Quyền truy cập đã bị thu hồi
+              </p>
+              <p className="text-red-300/80 text-xs">
+                Vui lòng chờ admin duyệt lại thiết bị của bạn
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="text-red-400 text-sm text-center animate-pulse-soft">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Message, Reaction } from '@/types';
+import { generateFingerprint } from '@/lib/utils/device';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { NotificationToggle } from './NotificationToggle';
 import { AIMessage } from './AIMessage';
@@ -218,10 +219,11 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     // Clean up previous channel if exists
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     const channel = supabase
-      .channel('client-updates')
+      .channel(`client-updates-${userId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -253,12 +255,15 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           const memory = payload.new as any;
           // Check if it's from admin
           if (memory.sender_role === 'admin' && memory.user_id === userId) {
+            // Immediately update count and trigger effects
+            loadAdminMemoryCount();
+            
+            // Trigger glow effect
+            setGlowEffect(true);
+            setTimeout(() => setGlowEffect(false), 4000);
+            
             // Show notification to client
             showAdminMemoryNotificationRef.current?.();
-            // Update admin memory count immediately
-            if (loadAdminMemoryCountRef.current) {
-              loadAdminMemoryCountRef.current();
-            }
           }
         }
       )
@@ -276,6 +281,22 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           // Check if device was just approved (is_active changed from false to true)
           if (oldDevice && oldDevice.is_active === false && device.is_active === true) {
             showDeviceApprovalNotificationRef.current?.();
+          }
+          // Check if device was just revoked (is_active changed from true to false)
+          if (oldDevice && oldDevice.is_active === true && device.is_active === false) {
+            const fingerprint = generateFingerprint();
+            // Only act if the revoked device is the current device
+            if (device.fingerprint === fingerprint) {
+              console.log('🚨 Client: Current device revoked, logging out and redirecting.');
+              // Clear all auth data
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+                // Force redirect with blocked message
+                window.location.href = '/welcome?blocked=true';
+              }
+            }
           }
         }
       )
@@ -431,13 +452,17 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
         .eq('user_id', userId)
         .eq('sender_role', 'admin');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Load admin memory count error:', error);
+        return;
+      }
+
       const newCount = count || 0;
 
-      // Trigger glow effect if count increased
-      if (newCount > prevMemoryCountRef.current) {
+      // Trigger glow effect if count increased (and not first load)
+      if (prevMemoryCountRef.current > 0 && newCount > prevMemoryCountRef.current) {
         setGlowEffect(true);
-        setTimeout(() => setGlowEffect(false), 4000); // 4 seconds magical glow
+        setTimeout(() => setGlowEffect(false), 4000);
       }
 
       prevMemoryCountRef.current = newCount;
@@ -472,7 +497,50 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     const cleanup = setupRealtime();
     checkNotificationPermission();
 
-    return cleanup;
+    // Poll admin memory count periodically as fallback
+    const pollInterval = setInterval(() => {
+      if (loadAdminMemoryCountRef.current) {
+        loadAdminMemoryCountRef.current();
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Poll device status to check if revoked (fallback for realtime)
+    const deviceCheckInterval = setInterval(async () => {
+      try {
+        const fingerprint = generateFingerprint();
+        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        
+        if (storedToken) {
+          const response = await fetch('/api/devices/check-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: storedToken, fingerprint }),
+          });
+
+          const result = await response.json();
+          
+          if (result.success && result.isApproved === false) {
+            // Device was revoked - clear auth and redirect
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('token');
+              localStorage.removeItem('userId');
+              localStorage.removeItem('userRole');
+              window.location.href = '/welcome?blocked=true';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Device status check error:', error);
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => {
+      cleanup();
+      clearInterval(pollInterval);
+      clearInterval(deviceCheckInterval);
+    };
   }, [loadDailyMessage, loadAdminMemoryCount, setupRealtime, checkNotificationPermission]);
 
   if (showHistory) {
@@ -596,8 +664,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
               </button>
               {showMemoryTooltip && (
                 <div className="absolute top-full right-0 mt-2 w-56 bg-romantic-dark/95 backdrop-blur-md rounded-lg p-3 border border-romantic-glow/30 shadow-xl z-50 animate-fade-in">
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="text-white text-xs font-medium">Giải thích</p>
+                  <div className="flex items-center mb-2">
                     <button
                       onClick={() => setShowMemoryTooltip(false)}
                       className="text-romantic-glow/60 hover:text-romantic-glow text-xs"
@@ -606,7 +673,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
                     </button>
                   </div>
                   <p className="text-white text-xs leading-relaxed">
-                    Số lần Cậu ấy đã nhấn {"Nhớ"} cho bạn. Mỗi lần nhấn là một lời nhắn yêu thương 💕
+                    Cậu ấy đã gửi {"Nhớ"} cho bạn 💕
                   </p>
                 </div>
               )}

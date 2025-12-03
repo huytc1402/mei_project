@@ -43,7 +43,18 @@ export default function HomePage() {
           const result = await response.json();
           
           if (result.success) {
-            // If first time on this device, go to welcome
+            // If device is not approved or revoked, redirect to welcome with blocked message
+            if (result.isApproved === false || result.needsApproval === true) {
+              // Clear auth data
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+              }
+              router.push('/welcome?blocked=true');
+              return;
+            }
+            // If first time, go to welcome (normal flow)
             if (result.isFirstTime === true) {
               router.push('/welcome');
               return;

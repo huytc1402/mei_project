@@ -24,6 +24,23 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
+    // Get device info first
+    const { data: device, error: deviceError } = await supabase
+      .from('devices')
+      .select('*, user_id')
+      .eq('id', deviceId)
+      .single();
+
+    if (deviceError || !device) {
+      return NextResponse.json(
+        { success: false, error: 'Device not found' },
+        { status: 404 }
+      );
+    }
+
+    const deviceData = device as any;
+    const userId = deviceData.user_id;
+
     if (action === 'approve') {
       // Approve device - set is_active to true
       const { error } = await (supabase
@@ -33,18 +50,8 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error;
 
-      // Get device info for notifications
-      const { data: device } = await supabase
-        .from('devices')
-        .select('*, user_id')
-        .eq('id', deviceId)
-        .single();
-
-      if (device) {
-        const deviceData = device as any;
-        const userId = deviceData.user_id;
-
-        // Send Telegram notification to admin
+      // Send Telegram notification
+      try {
         const { TelegramService } = await import('@/services/telegram.service');
         const telegram = new TelegramService();
         await telegram.sendAlert(
@@ -53,66 +60,45 @@ export async function POST(request: NextRequest) {
           `User Agent: ${deviceData.user_agent.substring(0, 50)}...\n` +
           `⏰ ${new Date().toLocaleString('vi-VN')}`
         );
-
-        // Send push notification to client via Supabase realtime
-        // Create a notification record that client can listen to
-        const { NotificationService } = await import('@/services/notification.service');
-        const notificationService = new NotificationService();
-        
-        // Store device approval notification (client will receive via realtime)
-        // Note: device_approvals table might not exist, that's okay - we'll use realtime on devices table
-        const { error: insertError } = await supabase.from('device_approvals').insert({
-          user_id: userId,
-          device_id: deviceId,
-          approved_at: new Date().toISOString(),
-        } as any);
-        
-        // Ignore error if table doesn't exist - notification will be sent via realtime subscription on devices table
-        if (insertError) {
-          console.log('Device approvals table not found or error:', insertError.message);
-        }
-
-        // Trigger notification via realtime subscription (client listens to devices table)
-        // The client will detect the is_active change and show notification
+      } catch (telegramError) {
+        console.error('Telegram notification error:', telegramError);
       }
 
       return NextResponse.json({ success: true });
     } else if (action === 'revoke') {
-      // Revoke device - set is_active to false
-      const { error } = await (supabase
+      // Revoke device - set is_active to false AND delete all related data
+      const { error: updateError } = await (supabase
         .from('devices') as any)
         .update({ is_active: false })
         .eq('id', deviceId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Get device info for notifications
-      const { data: device } = await supabase
-        .from('devices')
-        .select('*, user_id')
-        .eq('id', deviceId)
-        .single();
+      // Delete all related data for this user
+      await Promise.all([
+        supabase.from('reactions').delete().eq('user_id', userId),
+        supabase.from('messages').delete().eq('user_id', userId),
+        supabase.from('memories').delete().eq('user_id', userId),
+        supabase.from('daily_notifications').delete().eq('user_id', userId),
+      ]);
 
-      if (device) {
-        const deviceData = device as any;
-        // Send Telegram notification
-        try {
-          const { TelegramService } = await import('@/services/telegram.service');
-          const telegram = new TelegramService();
-          await telegram.sendAlert(
-            `🔒 Thiết bị đã bị thu hồi quyền truy cập!\n\n` +
-            `Fingerprint: ${deviceData.fingerprint.substring(0, 24)}...\n` +
-            `User Agent: ${deviceData.user_agent.substring(0, 50)}...\n` +
-            `⏰ ${new Date().toLocaleString('vi-VN')}`
-          );
-        } catch (telegramError) {
-          console.error('Telegram notification error:', telegramError);
-        }
+      // Send Telegram notification
+      try {
+        const { TelegramService } = await import('@/services/telegram.service');
+        const telegram = new TelegramService();
+        await telegram.sendAlert(
+          `🔒 Thiết bị đã bị thu hồi quyền truy cập!\n\n` +
+          `Fingerprint: ${deviceData.fingerprint.substring(0, 24)}...\n` +
+          `User Agent: ${deviceData.user_agent.substring(0, 50)}...\n` +
+          `⏰ ${new Date().toLocaleString('vi-VN')}`
+        );
+      } catch (telegramError) {
+        console.error('Telegram notification error:', telegramError);
       }
 
       return NextResponse.json({ success: true });
     } else {
-      // Deny device - delete it
+      // Deny device - delete it completely
       const { error } = await supabase
         .from('devices')
         .delete()
@@ -130,4 +116,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -27,278 +27,409 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Check if user exists
-    const { data: users, error: userError } = await supabase
+    // Get or create user - ensure only 1 user per role
+    let userId: string;
+    
+    // Always check for existing user first
+    const { data: existingUsers, error: userError } = await supabase
       .from('users')
-      .select('*')
+      .select('id')
       .eq('role', role)
-      .limit(1);
+      .order('created_at', { ascending: true });
 
     if (userError) throw userError;
 
-    let userId: string;
-
-    if (users && users.length > 0 && users[0]) {
-      userId = (users[0] as any).id;
-
-      // Check existing devices for client
-      if (role === 'client') {
-        const { data: devices, error: deviceError } = await supabase
-          .from('devices')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('is_active', true);
-
-        if (deviceError) throw deviceError;
-
-        if (devices && devices.length > 0) {
-          const existingDevice = devices.find(
-            (d: any) => d.fingerprint === fingerprint
-          ) as any;
-
-          if (!existingDevice) {
-            // Check if device with this fingerprint already exists (even if inactive)
-            const { data: existingDevicesByFingerprint } = await supabase
-              .from('devices')
-              .select('id, is_active')
-              .eq('user_id', userId)
-              .eq('fingerprint', fingerprint)
-              .limit(1);
-
-            if (existingDevicesByFingerprint && existingDevicesByFingerprint.length > 0) {
-              // Device exists - update it instead of creating duplicate
-              const existingDeviceByFp = existingDevicesByFingerprint[0] as any;
-              await (supabase
-                .from('devices') as any)
-                .update({ 
-                  user_agent: userAgent,
-                  ip_hash: ipHash,
-                  last_seen: new Date().toISOString(),
-                })
-                .eq('id', existingDeviceByFp.id);
-
-              if (existingDeviceByFp.is_active === false) {
-                // Still pending approval
-                return NextResponse.json(
-                  {
-                    success: false,
-                    error: 'Thiết bị mới được phát hiện. Vui lòng chờ xác nhận từ admin.',
-                  },
-                  { status: 403 }
-                );
-              }
-              // Device is active, continue with login (no need to create new device)
-            } else {
-              // Truly new device - create with is_active = false (pending approval)
-              const { data: newDevice, error: deviceInsertError } = await supabase
-                .from('devices')
-                .insert({
-                  user_id: userId,
-                  fingerprint,
-                  user_agent: userAgent,
-                  ip_hash: ipHash,
-                  is_active: false, // Chờ admin approval
-                } as any)
-                .select()
-                .single();
-
-              if (deviceInsertError) {
-                console.error('❌ Error creating device:', deviceInsertError);
-                // Check if device already exists (unique constraint violation)
-                if (deviceInsertError.code === '23505') {
-                  console.log('Device already exists (duplicate key), checking status...');
-                  // Try to get the existing device
-                  const { data: existingDeviceData } = await supabase
-                    .from('devices')
-                    .select('id, is_active')
-                    .eq('user_id', userId)
-                    .eq('fingerprint', fingerprint)
-                    .limit(1)
-                    .maybeSingle();
-
-                  if (existingDeviceData) {
-                    const deviceData = existingDeviceData as any;
-                    // Update last_seen for existing device
-                    await (supabase
-                      .from('devices') as any)
-                      .update({ last_seen: new Date().toISOString() })
-                      .eq('id', deviceData.id);
-
-                    if (deviceData.is_active === false) {
-                      return NextResponse.json(
-                        {
-                          success: false,
-                          error: 'Thiết bị mới được phát hiện. Vui lòng chờ xác nhận từ admin.',
-                        },
-                        { status: 403 }
-                      );
-                    }
-                    // Device is active, continue with login
-                  } else {
-                    // Device exists but couldn't fetch - return error
-                    return NextResponse.json(
-                      {
-                        success: false,
-                        error: 'Lỗi khi kiểm tra thiết bị. Vui lòng thử lại.',
-                      },
-                      { status: 500 }
-                    );
-                  }
-                } else {
-                  // Other error - still return error to user
-                  return NextResponse.json(
-                    {
-                      success: false,
-                      error: 'Lỗi khi tạo thiết bị. Vui lòng thử lại.',
-                    },
-                    { status: 500 }
-                  );
-                }
-              } else if (newDevice) {
-                console.log('✅ New device created successfully:', (newDevice as any).id);
-                
-                // New device detected - need admin approval
-                // Send Telegram notification (will log if not configured)
-                try {
-                  const { TelegramService } = await import('@/services/telegram.service');
-                  const telegram = new TelegramService();
-                  await telegram.sendNewDeviceAlert(
-                    `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
-                    new Date().toLocaleString('vi-VN')
-                  );
-                  console.log('✅ Telegram notification sent for new device');
-                } catch (telegramError) {
-                  console.error('❌ Telegram notification error:', telegramError);
-                  // Continue - notification failure shouldn't block device creation
-                }
-
-                return NextResponse.json(
-                  {
-                    success: false,
-                    error: 'Thiết bị mới được phát hiện. Vui lòng chờ xác nhận từ admin.',
-                  },
-                  { status: 403 }
-                );
-              }
-            }
-          }
-
-          // Update last seen for existing active device
-          await (supabase
-            .from('devices') as any)
-            .update({ 
-              last_seen: new Date().toISOString(),
-              user_agent: userAgent, // Update user agent in case it changed
-              ip_hash: ipHash, // Update IP hash in case it changed
-            })
-            .eq('id', existingDevice.id);
-        } else {
-          // First device - check if exists first to avoid duplicates
-          const { data: existingDevice } = await supabase
-            .from('devices')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('fingerprint', fingerprint)
-            .limit(1)
-            .maybeSingle();
-
-          if (!existingDevice) {
-            // Only insert if doesn't exist
-            const { error: insertError } = await supabase.from('devices').insert({
-              user_id: userId,
-              fingerprint,
-              user_agent: userAgent,
-              ip_hash: ipHash,
-              is_active: true,
-            } as any);
-
-            if (insertError && insertError.code !== '23505') {
-              // Ignore duplicate key errors, log others
-              console.error('First device insert error:', insertError);
-            }
-          } else {
-            // Update last_seen if device exists
-            await (supabase
-              .from('devices') as any)
-              .update({ last_seen: new Date().toISOString() })
-              .eq('id', (existingDevice as any).id);
-          }
-        }
-      } else {
-        // Admin - check if exists first to avoid duplicates
-        const { data: devices } = await supabase
-          .from('devices')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('fingerprint', fingerprint)
-          .limit(1);
-
-        if (devices && devices.length > 0 && devices[0]) {
-          // Update existing device
-          await (supabase
-            .from('devices') as any)
-            .update({ 
-              last_seen: new Date().toISOString(),
-              user_agent: userAgent,
-              ip_hash: ipHash,
-            })
-            .eq('id', (devices[0] as any).id);
-        } else {
-          // Insert new device
-          const { error: insertError } = await supabase.from('devices').insert({
-            user_id: userId,
-            fingerprint,
-            user_agent: userAgent,
-            ip_hash: ipHash,
-            is_active: true,
-          } as any);
-
-          if (insertError && insertError.code !== '23505') {
-            // Ignore duplicate key errors, log others
-            console.error('Admin device insert error:', insertError);
-          }
-        }
+    if (existingUsers && existingUsers.length > 0) {
+      // User exists - use the first one (oldest)
+      userId = (existingUsers[0] as any).id;
+      
+      // Delete duplicates if any (keep only the first one)
+      if (existingUsers.length > 1) {
+        const duplicateIds = existingUsers.slice(1).map((u: any) => u.id);
+        await supabase
+          .from('users')
+          .delete()
+          .in('id', duplicateIds);
       }
     } else {
-      // Create new user
+      // No user exists - create one
       const { data: newUser, error: createError } = await supabase
         .from('users')
         .insert({ role } as any)
         .select()
         .single();
 
-      if (createError) throw createError;
-      if (!newUser) throw new Error('Failed to create user');
-      userId = (newUser as any).id;
+      if (createError) {
+        // If any error, check again and use existing (race condition)
+        const { data: checkUsers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', role)
+          .order('created_at', { ascending: true });
+        if (checkUsers && checkUsers.length > 0) {
+          userId = (checkUsers[0] as any).id;
+          // Delete duplicates
+          if (checkUsers.length > 1) {
+            const duplicateIds = checkUsers.slice(1).map((u: any) => u.id);
+            await supabase
+              .from('users')
+              .delete()
+              .in('id', duplicateIds);
+          }
+        } else {
+          throw createError;
+        }
+      } else if (newUser) {
+        userId = (newUser as any).id;
+        // Double-check: delete any duplicates that might have been created
+        const { data: allUsers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', role)
+          .order('created_at', { ascending: true });
+        if (allUsers && allUsers.length > 1) {
+          // Keep first, delete rest
+          userId = (allUsers[0] as any).id;
+          const duplicateIds = allUsers.slice(1).map((u: any) => u.id);
+          await supabase
+            .from('users')
+            .delete()
+            .in('id', duplicateIds);
+        }
+      } else {
+        throw new Error('Failed to create user');
+      }
+    }
 
-      // Check if device exists before inserting to avoid duplicates
-      const { data: existingDevice } = await supabase
+    // Handle device - ensure no duplicates
+    if (role === 'admin') {
+      // Admin: Always auto-approved
+      // Check for existing device first
+      const { data: existingDevices } = await supabase
         .from('devices')
         .select('id')
         .eq('user_id', userId)
         .eq('fingerprint', fingerprint)
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: true });
 
-      if (!existingDevice) {
-        const { error: insertError } = await supabase.from('devices').insert({
-          user_id: userId,
-          fingerprint,
-          user_agent: userAgent,
-          ip_hash: ipHash,
-          is_active: true,
-        } as any);
+      if (existingDevices && existingDevices.length > 0) {
+        // Device exists - update the first one (oldest)
+        const deviceId = (existingDevices[0] as any).id;
+        const { error: updateError } = await (supabase
+          .from('devices') as any)
+          .update({
+            user_agent: userAgent,
+            ip_hash: ipHash,
+            is_active: true,
+            last_seen: new Date().toISOString(),
+          })
+          .eq('id', deviceId);
 
-        if (insertError && insertError.code !== '23505') {
-          // Ignore duplicate key errors, log others
-          console.error('New user device insert error:', insertError);
+        if (updateError) throw updateError;
+        
+        // Delete duplicates if any
+        if (existingDevices.length > 1) {
+          const duplicateIds = existingDevices.slice(1).map((d: any) => d.id);
+          await supabase
+            .from('devices')
+            .delete()
+            .in('id', duplicateIds);
         }
       } else {
-        // Update last_seen if device exists
-        await (supabase
+        // Insert new device
+        const { error: insertError } = await supabase
+          .from('devices')
+          .insert({
+            user_id: userId,
+            fingerprint,
+            user_agent: userAgent,
+            ip_hash: ipHash,
+            is_active: true,
+            last_seen: new Date().toISOString(),
+          } as any);
+
+        if (insertError) {
+          // If any error, check again and update existing
+          const { data: checkDevices } = await supabase
+            .from('devices')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('fingerprint', fingerprint)
+            .order('created_at', { ascending: true });
+
+          if (checkDevices && checkDevices.length > 0) {
+            const deviceId = (checkDevices[0] as any).id;
+            await (supabase
+              .from('devices') as any)
+              .update({
+                user_agent: userAgent,
+                ip_hash: ipHash,
+                is_active: true,
+                last_seen: new Date().toISOString(),
+              })
+              .eq('id', deviceId);
+            
+            // Delete duplicates
+            if (checkDevices.length > 1) {
+              const duplicateIds = checkDevices.slice(1).map((d: any) => d.id);
+              await supabase
+                .from('devices')
+                .delete()
+                .in('id', duplicateIds);
+            }
+          } else {
+            throw insertError;
+          }
+        } else {
+          // Double-check: delete any duplicates that might have been created
+          const { data: allDevices } = await supabase
+            .from('devices')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('fingerprint', fingerprint)
+            .order('created_at', { ascending: true });
+          
+          if (allDevices && allDevices.length > 1) {
+            // Keep first, delete rest
+            const deviceId = (allDevices[0] as any).id;
+            await (supabase
+              .from('devices') as any)
+              .update({
+                user_agent: userAgent,
+                ip_hash: ipHash,
+                is_active: true,
+                last_seen: new Date().toISOString(),
+              })
+              .eq('id', deviceId);
+            
+            const duplicateIds = allDevices.slice(1).map((d: any) => d.id);
+            await supabase
+              .from('devices')
+              .delete()
+              .in('id', duplicateIds);
+          }
+        }
+      }
+    } else {
+      // Client: Check device status
+      // First, check if device with this fingerprint exists
+      const { data: existingDevicesByFp } = await supabase
+        .from('devices')
+        .select('id, is_active, fingerprint')
+        .eq('user_id', userId)
+        .eq('fingerprint', fingerprint)
+        .order('created_at', { ascending: true });
+
+      if (existingDevicesByFp && existingDevicesByFp.length > 0) {
+        // Device exists - update the first one (oldest)
+        const existingDevice = existingDevicesByFp[0] as any;
+        const { error: updateError } = await (supabase
           .from('devices') as any)
-          .update({ last_seen: new Date().toISOString() })
-          .eq('id', existingDevice as any).id;
+          .update({
+            user_agent: userAgent,
+            ip_hash: ipHash,
+            last_seen: new Date().toISOString(),
+          })
+          .eq('id', existingDevice.id);
+
+        if (updateError) throw updateError;
+        
+        // Delete duplicates if any
+        if (existingDevicesByFp.length > 1) {
+          const duplicateIds = existingDevicesByFp.slice(1).map((d: any) => d.id);
+          await supabase
+            .from('devices')
+            .delete()
+            .in('id', duplicateIds);
+        }
+
+        // If device is inactive (revoked), require admin approval again
+        if (!existingDevice.is_active) {
+          // Update device info but keep is_active = false
+          const { error: updateError2 } = await (supabase
+            .from('devices') as any)
+            .update({
+              user_agent: userAgent,
+              ip_hash: ipHash,
+              last_seen: new Date().toISOString(),
+              // Keep is_active = false (revoked)
+            })
+            .eq('id', existingDevice.id);
+
+          if (updateError2) throw updateError2;
+
+          // Send notification to admin about re-approval request
+          try {
+            const { TelegramService } = await import('@/services/telegram.service');
+            const telegram = new TelegramService();
+            await telegram.sendNewDeviceAlert(
+              `Thiết bị đã bị thu hồi yêu cầu duyệt lại!\nUser ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
+              new Date().toLocaleString('vi-VN')
+            );
+          } catch (telegramError) {
+            console.error('Telegram notification error:', telegramError);
+          }
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Quyền truy cập của bạn đã bị thu hồi. Vui lòng chờ admin duyệt lại.',
+            },
+            { status: 403 }
+          );
+        }
+      } else {
+        // New device - check if there are any active devices
+        const { data: activeDevices } = await supabase
+          .from('devices')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .limit(1);
+
+        const isFirstDevice = !activeDevices || activeDevices.length === 0;
+        const isActive = isFirstDevice; // Auto-approve first device
+
+        // Insert new device
+        const { error: insertError } = await supabase
+          .from('devices')
+          .insert({
+            user_id: userId,
+            fingerprint,
+            user_agent: userAgent,
+            ip_hash: ipHash,
+            is_active: isActive,
+            last_seen: new Date().toISOString(),
+          } as any);
+
+        if (insertError) {
+          // If any error, check again and update existing
+          const { data: checkDevices } = await supabase
+            .from('devices')
+            .select('id, is_active')
+            .eq('user_id', userId)
+            .eq('fingerprint', fingerprint)
+            .order('created_at', { ascending: true });
+
+          if (checkDevices && checkDevices.length > 0) {
+            const checkDevice = checkDevices[0] as any;
+            
+            // If device is inactive (revoked), require admin approval again
+            if (!checkDevice.is_active) {
+              // Update device info but keep is_active = false
+              await (supabase
+                .from('devices') as any)
+                .update({
+                  user_agent: userAgent,
+                  ip_hash: ipHash,
+                  last_seen: new Date().toISOString(),
+                  // Keep is_active = false (revoked)
+                })
+                .eq('id', checkDevice.id);
+              
+              // Delete duplicates
+              if (checkDevices.length > 1) {
+                const duplicateIds = checkDevices.slice(1).map((d: any) => d.id);
+                await supabase
+                  .from('devices')
+                  .delete()
+                  .in('id', duplicateIds);
+              }
+
+              // Send notification to admin
+              try {
+                const { TelegramService } = await import('@/services/telegram.service');
+                const telegram = new TelegramService();
+                await telegram.sendNewDeviceAlert(
+                  `Thiết bị đã bị thu hồi yêu cầu duyệt lại!\nUser ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
+                  new Date().toLocaleString('vi-VN')
+                );
+              } catch (telegramError) {
+                console.error('Telegram notification error:', telegramError);
+              }
+
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: 'Quyền truy cập của bạn đã bị thu hồi. Vui lòng chờ admin duyệt lại.',
+                },
+                { status: 403 }
+              );
+            }
+
+            // Device is active - update it
+            await (supabase
+              .from('devices') as any)
+              .update({
+                user_agent: userAgent,
+                ip_hash: ipHash,
+                is_active: isActive,
+                last_seen: new Date().toISOString(),
+              })
+              .eq('id', checkDevice.id);
+            
+            // Delete duplicates
+            if (checkDevices.length > 1) {
+              const duplicateIds = checkDevices.slice(1).map((d: any) => d.id);
+              await supabase
+                .from('devices')
+                .delete()
+                .in('id', duplicateIds);
+            }
+          } else {
+            throw insertError;
+          }
+        } else {
+          // Double-check: delete any duplicates that might have been created
+          const { data: allDevices } = await supabase
+            .from('devices')
+            .select('id, is_active')
+            .eq('user_id', userId)
+            .eq('fingerprint', fingerprint)
+            .order('created_at', { ascending: true });
+          
+          if (allDevices && allDevices.length > 1) {
+            // Keep first, delete rest
+            const firstDevice = allDevices[0] as any;
+            await (supabase
+              .from('devices') as any)
+              .update({
+                user_agent: userAgent,
+                ip_hash: ipHash,
+                is_active: isActive,
+                last_seen: new Date().toISOString(),
+              })
+              .eq('id', firstDevice.id);
+            
+            const duplicateIds = allDevices.slice(1).map((d: any) => d.id);
+            await supabase
+              .from('devices')
+              .delete()
+              .in('id', duplicateIds);
+          }
+        }
+
+        // If not first device, send notification and return error
+        if (!isFirstDevice) {
+          try {
+            const { TelegramService } = await import('@/services/telegram.service');
+            const telegram = new TelegramService();
+            await telegram.sendNewDeviceAlert(
+              `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
+              new Date().toLocaleString('vi-VN')
+            );
+          } catch (telegramError) {
+            console.error('Telegram notification error:', telegramError);
+          }
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Thiết bị mới được phát hiện. Vui lòng chờ xác nhận từ admin.',
+            },
+            { status: 403 }
+          );
+        }
       }
     }
 
@@ -315,4 +446,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
