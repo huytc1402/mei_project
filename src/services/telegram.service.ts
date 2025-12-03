@@ -51,14 +51,6 @@ export class TelegramService {
     const message = `✨ Cậu ấy đã nhấn "Nhớ" lúc ${timestamp}`;
     await this.sendAlert(message);
   }
-
-  async sendNewDeviceAlert(
-    deviceInfo: string,
-    timestamp: string
-  ): Promise<void> {
-    const message = `⚠️ Thiết bị mới được phát hiện!\n\n${deviceInfo}\n⏰ ${timestamp}`;
-    await this.sendAlert(message);
-  }
 }
 
 

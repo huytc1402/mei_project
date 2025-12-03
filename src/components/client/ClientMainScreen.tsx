@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Message, Reaction } from '@/types';
-import { generateFingerprint } from '@/lib/utils/device';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { NotificationToggle } from './NotificationToggle';
 import { AIMessage } from './AIMessage';
@@ -26,13 +25,13 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   const [glowEffect, setGlowEffect] = useState(false); // For glow effect when admin sends memory
   const [showMemoryTooltip, setShowMemoryTooltip] = useState(false); // Tooltip for memory count
   const prevMemoryCountRef = useRef(0); // Track previous count for glow effect
+  const tooltipRef = useRef<HTMLDivElement>(null); // Ref for tooltip container
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
 
   // Use refs for functions called in callbacks to avoid circular dependencies
   const loadAdminMemoryCountRef = useRef<() => Promise<void>>();
   const showAdminMemoryNotificationRef = useRef<() => Promise<void>>();
-  const showDeviceApprovalNotificationRef = useRef<() => Promise<void>>();
 
   const generateNewMessage = useCallback(async () => {
     try {
@@ -256,7 +255,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           // Check if it's from admin
           if (memory.sender_role === 'admin' && memory.user_id === userId) {
             // Immediately update count and trigger effects
-            loadAdminMemoryCount();
+            loadAdminMemoryCountRef.current?.();
             
             // Trigger glow effect
             setGlowEffect(true);
@@ -264,39 +263,6 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             
             // Show notification to client
             showAdminMemoryNotificationRef.current?.();
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'devices',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload: { new: any, old: any }) => {
-          const device = payload.new as any;
-          const oldDevice = payload.old as any;
-          // Check if device was just approved (is_active changed from false to true)
-          if (oldDevice && oldDevice.is_active === false && device.is_active === true) {
-            showDeviceApprovalNotificationRef.current?.();
-          }
-          // Check if device was just revoked (is_active changed from true to false)
-          if (oldDevice && oldDevice.is_active === true && device.is_active === false) {
-            const fingerprint = generateFingerprint();
-            // Only act if the revoked device is the current device
-            if (device.fingerprint === fingerprint) {
-              console.log('🚨 Client: Current device revoked, logging out and redirecting.');
-              // Clear all auth data
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem('token');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('userRole');
-                // Force redirect with blocked message
-                window.location.href = '/welcome?blocked=true';
-              }
-            }
           }
         }
       )
@@ -398,6 +364,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
         channelRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, supabase]);
 
   const showAdminMemoryNotification = useCallback(async () => {
@@ -415,25 +382,6 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
         });
       } catch (error) {
         console.error('Notification error:', error);
-      }
-    }
-  }, []);
-
-  const showDeviceApprovalNotification = useCallback(async () => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification('✅ Thiết bị đã được duyệt', {
-          body: 'Thiết bị của bạn đã được Cậu ấy xác nhận. Bạn có thể tiếp tục sử dụng ứng dụng! 🎉',
-          icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png',
-          tag: 'device-approval',
-          requireInteraction: false,
-          // @ts-expect-error: 'vibrate' is not in NotificationOptions type but works in browsers supporting it
-          vibrate: [200, 100, 200],
-        });
-      } catch (error) {
-        console.error('Device approval notification error:', error);
       }
     }
   }, []);
@@ -476,8 +424,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   useEffect(() => {
     loadAdminMemoryCountRef.current = loadAdminMemoryCount;
     showAdminMemoryNotificationRef.current = showAdminMemoryNotification;
-    showDeviceApprovalNotificationRef.current = showDeviceApprovalNotification;
-  }, [loadAdminMemoryCount, showAdminMemoryNotification, showDeviceApprovalNotification]);
+  }, [loadAdminMemoryCount, showAdminMemoryNotification]);
 
   const handleRefresh = useCallback(async () => {
     await Promise.all([
@@ -490,6 +437,22 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     onRefresh: handleRefresh,
     enabled: !showHistory && !loading,
   });
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        setShowMemoryTooltip(false);
+      }
+    };
+
+    if (showMemoryTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showMemoryTooltip]);
 
   useEffect(() => {
     loadDailyMessage();
@@ -504,42 +467,9 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
       }
     }, 5000); // Poll every 5 seconds
 
-    // Poll device status to check if revoked (fallback for realtime)
-    const deviceCheckInterval = setInterval(async () => {
-      try {
-        const fingerprint = generateFingerprint();
-        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        
-        if (storedToken) {
-          const response = await fetch('/api/devices/check-status', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token: storedToken, fingerprint }),
-          });
-
-          const result = await response.json();
-          
-          if (result.success && result.isApproved === false) {
-            // Device was revoked - clear auth and redirect
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('token');
-              localStorage.removeItem('userId');
-              localStorage.removeItem('userRole');
-              window.location.href = '/welcome?blocked=true';
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Device status check error:', error);
-      }
-    }, 10000); // Check every 10 seconds
-
     return () => {
       cleanup();
       clearInterval(pollInterval);
-      clearInterval(deviceCheckInterval);
     };
   }, [loadDailyMessage, loadAdminMemoryCount, setupRealtime, checkNotificationPermission]);
 
@@ -651,23 +581,22 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           {/* Admin memory count and History button */}
           <div className="flex items-center gap-2">
             {/* Admin Memory Count with Click to Show Info */}
-            <div className="relative">
+            <div className="relative" ref={tooltipRef}>
               <button
                 className="flex items-center gap-1.5 px-2.5 py-1.5 bg-romantic-soft/40 backdrop-blur-sm rounded-lg border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors active:scale-95"
                 onClick={() => setShowMemoryTooltip(!showMemoryTooltip)}
               >
                 <span className="text-base sm:text-lg">✨</span>
                 <span className="text-white text-xs sm:text-sm font-medium">{adminMemoryCount}</span>
-                {!showMemoryTooltip && (
-                  <span className="text-romantic-glow/60 text-[10px] ml-1">ℹ️</span>
-                )}
+               
               </button>
               {showMemoryTooltip && (
                 <div className="absolute top-full right-0 mt-2 w-56 bg-romantic-dark/95 backdrop-blur-md rounded-lg p-3 border border-romantic-glow/30 shadow-xl z-50 animate-fade-in">
-                  <div className="flex items-center mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-romantic-glow/80 text-xs font-medium">Thông tin</span>
                     <button
                       onClick={() => setShowMemoryTooltip(false)}
-                      className="text-romantic-glow/60 hover:text-romantic-glow text-xs"
+                      className="text-romantic-glow/60 hover:text-romantic-glow text-xs ml-auto"
                     >
                       ✕
                     </button>

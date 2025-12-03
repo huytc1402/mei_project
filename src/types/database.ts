@@ -13,52 +13,17 @@ export interface Database {
         Row: {
           id: string;
           role: 'admin' | 'client';
-          device_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           role: 'admin' | 'client';
-          device_id?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           role?: 'admin' | 'client';
-          device_id?: string | null;
           created_at?: string;
-        };
-      };
-      devices: {
-        Row: {
-          id: string;
-          user_id: string;
-          fingerprint: string;
-          user_agent: string;
-          ip_hash: string;
-          is_active: boolean;
-          created_at: string;
-          last_seen: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          fingerprint: string;
-          user_agent: string;
-          ip_hash: string;
-          is_active?: boolean;
-          created_at?: string;
-          last_seen?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          fingerprint?: string;
-          user_agent?: string;
-          ip_hash?: string;
-          is_active?: boolean;
-          created_at?: string;
-          last_seen?: string;
         };
       };
       messages: {

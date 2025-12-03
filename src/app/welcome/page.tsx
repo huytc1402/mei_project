@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { generateFingerprint } from '@/lib/utils/device';
 
 // Force dynamic rendering - this page uses client-side auth
 export const dynamic = 'force-dynamic';
@@ -12,119 +11,16 @@ function WelcomePageContent() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [waitingForApproval, setWaitingForApproval] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Check if user was blocked
-  useEffect(() => {
-    const blocked = searchParams.get('blocked');
-    if (blocked === 'true') {
-      setIsBlocked(true);
-      // Clear the query param after showing message
-      router.replace('/welcome', { scroll: false });
-    }
-  }, [searchParams, router]);
-
-  // Check device status when token changes (only for client)
-  useEffect(() => {
-    if (!token || token.length < 5) {
-      setWaitingForApproval(false);
-      return;
-    }
-
-    const checkDeviceStatus = async () => {
-      try {
-        // Quick check: if token is admin token, skip device check (admin auto-approved)
-        // We'll verify this in the actual login, but for UI we can skip the check
-        const fingerprint = generateFingerprint();
-        const response = await fetch('/api/devices/check-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token, fingerprint }),
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          // Only show waiting if it's a client and needs approval
-          // Admin will always return isApproved: true
-          setWaitingForApproval(result.needsApproval === true);
-        }
-      } catch (error) {
-        console.error('Check device status error:', error);
-      }
-    };
-
-    // Debounce check
-    const timeoutId = setTimeout(() => {
-      setCheckingStatus(true);
-      checkDeviceStatus().finally(() => setCheckingStatus(false));
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [token]);
-
-  // Poll for device approval when waiting
-  useEffect(() => {
-    if (!waitingForApproval || !token) return;
-
-    const attemptLogin = async () => {
-      try {
-        const [adminResult, clientResult] = await Promise.all([
-          login(token, 'admin'),
-          login(token, 'client'),
-        ]);
-
-        const result = adminResult.success ? adminResult : clientResult;
-
-        if (result.success) {
-          setWaitingForApproval(false);
-          const role = result.actualRole || (result.userId ? 'client' : 'admin');
-          router.push(role === 'admin' ? '/admin' : '/client');
-        }
-      } catch (error) {
-        console.error('Auto login error:', error);
-      }
-    };
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const fingerprint = generateFingerprint();
-        const response = await fetch('/api/devices/check-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token, fingerprint }),
-        });
-
-        const result = await response.json();
-        if (result.success && result.isApproved) {
-          setWaitingForApproval(false);
-          // Try to login automatically
-          await attemptLogin();
-        }
-      } catch (error) {
-        console.error('Poll device status error:', error);
-      }
-    }, 3000); // Poll every 3 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [waitingForApproval, token, login, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    setWaitingForApproval(false);
 
     try {
-      // Optimize: Try both in parallel
+      // Try both admin and client login in parallel
       const [adminResult, clientResult] = await Promise.all([
         login(token, 'admin'),
         login(token, 'client'),
@@ -134,14 +30,8 @@ function WelcomePageContent() {
 
       if (result.success) {
         const role = result.actualRole || (result.userId ? 'client' : 'admin');
-        // Navigate immediately without waiting
         router.push(role === 'admin' ? '/admin' : '/client');
       } else {
-        // Check if it's a device approval error or revoked device
-        if (result.error?.includes('chờ xác nhận') || result.error?.includes('thu hồi')) {
-          setWaitingForApproval(true);
-          setIsBlocked(result.error?.includes('thu hồi') || false);
-        }
         setError(result.error || 'Token không hợp lệ');
         setLoading(false);
       }
@@ -175,39 +65,18 @@ function WelcomePageContent() {
             />
           </div>
 
-          {isBlocked && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-center animate-fade-in mb-4">
-              <div className="text-3xl mb-2">🔒</div>
-              <p className="text-red-400 text-sm font-medium mb-1">
-                Quyền truy cập đã bị thu hồi
-              </p>
-              <p className="text-red-300/80 text-xs">
-                Vui lòng chờ admin duyệt lại thiết bị của bạn
-              </p>
-            </div>
-          )}
-
           {error && (
             <div className="text-red-400 text-sm text-center animate-pulse-soft">
               {error}
             </div>
           )}
 
-          {waitingForApproval && (
-            <div className="bg-romantic-soft/40 border border-romantic-glow/30 rounded-lg p-4 text-center animate-fade-in">
-              <div className="text-3xl mb-2 animate-pulse">⏳</div>
-              <p className="text-romantic-glow/80 text-sm font-medium mb-1">
-                Chờ chút nhé...
-              </p>
-            </div>
-          )}
-
           <button
             type="submit"
-            disabled={loading || waitingForApproval || checkingStatus}
+            disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-romantic-accent to-romantic-glow rounded-lg text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed glow-button"
           >
-            {loading ? 'Đang xử lý...' : waitingForApproval ? 'Đang chờ duyệt...' : checkingStatus ? 'Đang kiểm tra...' : 'Tiếp tục'}
+            {loading ? 'Đang xử lý...' : 'Tiếp tục'}
           </button>
         </form>
       </div>
@@ -216,17 +85,6 @@ function WelcomePageContent() {
 }
 
 export default function WelcomePage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4" style={{ backgroundColor: '#0a0e1a' }}>
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-pulse">✨</div>
-          <p className="text-romantic-glow/70 text-sm">Đang tải...</p>
-        </div>
-      </div>
-    }>
-      <WelcomePageContent />
-    </Suspense>
-  );
+  return <WelcomePageContent />;
 }
 

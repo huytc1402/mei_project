@@ -7,7 +7,6 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { NotificationScheduler } from './NotificationScheduler';
 import { HistoryView } from './HistoryView';
 import { RealtimeAlerts } from './RealtimeAlerts';
-import { DeviceApproval } from './DeviceApproval';
 import { SendMemory } from './SendMemory';
 
 interface AdminDashboardProps {
@@ -15,7 +14,7 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ userId }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'history' | 'alerts' | 'devices' | 'send'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'history' | 'alerts' | 'send'>('schedule');
   const [realtimeData, setRealtimeData] = useState<{
     reactions: Reaction[];
     messages: Message[];
@@ -362,15 +361,6 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
             Thông báo Realtime
           </button>
           <button
-            onClick={() => setActiveTab('devices')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'devices'
-              ? 'bg-romantic-glow text-white'
-              : 'text-romantic-glow/60 hover:text-romantic-glow'
-              }`}
-          >
-            Thiết bị
-          </button>
-          <button
             onClick={() => setActiveTab('send')}
             className={`flex-1 py-2 px-4 rounded-lg text-sm transition-all ${activeTab === 'send'
               ? 'bg-romantic-glow text-white'
@@ -384,7 +374,6 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
         {activeTab === 'schedule' && <NotificationScheduler />}
         {activeTab === 'history' && <HistoryView data={realtimeData} />}
         {activeTab === 'alerts' && <RealtimeAlerts data={realtimeData} />}
-        {activeTab === 'devices' && <DeviceApproval />}
         {activeTab === 'send' && <SendMemory />}
       </div>
     </div>

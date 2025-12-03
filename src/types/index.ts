@@ -3,19 +3,7 @@ export type UserRole = 'admin' | 'client';
 export interface User {
   id: string;
   role: UserRole;
-  deviceId?: string;
   createdAt: string;
-}
-
-export interface Device {
-  id: string;
-  userId: string;
-  fingerprint: string;
-  userAgent: string;
-  ipHash: string;
-  isActive: boolean;
-  createdAt: string;
-  lastSeen: string;
 }
 
 export interface Message {

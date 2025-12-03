@@ -22,6 +22,37 @@ interface HistoryItem {
   senderRole?: string;
 }
 
+// Component for daily message with expand/collapse (2-3 lines) - same as admin
+function DailyMessageItem({ message }: { message: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const MAX_LINES = 3; // Show 2-3 lines
+  const MAX_LENGTH = 150; // Approximate 2-3 lines
+
+  const shouldTruncate = message.length > MAX_LENGTH;
+  const displayText = isExpanded ? message : (shouldTruncate ? message.substring(0, MAX_LENGTH) + '...' : message);
+
+  return (
+    <div className="bg-gradient-to-r from-romantic-glow/20 to-romantic-accent/20 rounded-lg p-4 border border-romantic-glow/30">
+      <div className="flex items-start space-x-2">
+        <span className="text-2xl flex-shrink-0">💕</span>
+        <div className="flex-1">
+          <p className={`text-white text-sm leading-relaxed ${!isExpanded && shouldTruncate ? 'line-clamp-3' : ''}`}>
+            {displayText}
+          </p>
+          {shouldTruncate && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-2 text-romantic-glow/60 text-xs hover:text-romantic-glow transition-colors"
+            >
+              {isExpanded ? '▼ Thu gọn' : '▶ Xem thêm'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Memoized formatDate function
 const formatDate = (dateString: string | undefined | null): string => {
   if (!dateString) return 'Không xác định';
@@ -106,6 +137,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'reaction' | 'message' | 'memory'>('all');
   const [newItemsCount, setNewItemsCount] = useState(0); // Visual feedback for new items
+  const [dailyMessages, setDailyMessages] = useState<Map<string, string>>(new Map()); // State for daily messages like admin
   const supabase = useMemo(() => createClient(), []);
   const channelRef = useRef<any>(null);
   const dailyMessagesCacheRef = useRef<Map<string, string>>(new Map());
@@ -133,22 +165,19 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
         return prev;
       }
       
-      // Get date key for daily message
-      const itemDate = new Date(newItem.createdAt);
-      itemDate.setHours(0, 0, 0, 0);
-      const dateKey = itemDate.toISOString().split('T')[0];
+      // Get date key using UTC format (same as admin)
+      const date = new Date(newItem.createdAt);
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dateKey = format(utcDate, 'yyyy-MM-dd');
       
       // Check cache first
-      const cachedDailyMessage = dailyMessagesCacheRef.current.get(dateKey);
-      const itemWithMessage = cachedDailyMessage 
-        ? { ...newItem, dailyMessage: cachedDailyMessage }
-        : newItem;
+      const cachedDailyMessage = dailyMessagesCacheRef.current.get(dateKey) || dailyMessages.get(dateKey);
       
       // Fetch daily message async if not cached
       if (!cachedDailyMessage) {
-        const dateStart = new Date(dateKey);
+        const dateStart = new Date(utcDate);
         dateStart.setHours(0, 0, 0, 0);
-        const dateEnd = new Date(dateKey);
+        const dateEnd = new Date(utcDate);
         dateEnd.setHours(23, 59, 59, 999);
         
         (async () => {
@@ -165,15 +194,9 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
             
             if (notification?.content) {
               dailyMessagesCacheRef.current.set(dateKey, notification.content);
-              setHistory(current => {
-                const updated = current.map(item => 
-                  item.id === newItem.id 
-                    ? { ...item, dailyMessage: notification.content }
-                    : item
-                );
-                if (onHistoryLoaded) {
-                  onHistoryLoaded(updated);
-                }
+              setDailyMessages(prev => {
+                const updated = new Map(prev);
+                updated.set(dateKey, notification.content);
                 return updated;
               });
             }
@@ -184,7 +207,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
       }
       
       // Add item immediately
-      const updated = [itemWithMessage, ...prev].sort((a, b) => 
+      const updated = [newItem, ...prev].sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       
@@ -197,7 +220,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
       }
       return updated;
     });
-  }, [userId, supabase, onHistoryLoaded]);
+  }, [userId, supabase, onHistoryLoaded, dailyMessages]);
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -248,62 +271,9 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
         })),
       ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      if (allItems.length === 0) {
-        setHistory([]);
-        setLoading(false);
-        return;
-      }
-
-      // Get unique dates
-      const dateKeys = new Set<string>();
-      allItems.forEach(item => {
-        const date = new Date(item.createdAt);
-        date.setHours(0, 0, 0, 0);
-        dateKeys.add(date.toISOString().split('T')[0]);
-      });
-
-      const minDate = new Date(Math.min(...Array.from(dateKeys).map(k => new Date(k).getTime())));
-      const maxDate = new Date(Math.max(...Array.from(dateKeys).map(k => new Date(k).getTime())));
-      minDate.setHours(0, 0, 0, 0);
-      maxDate.setHours(23, 59, 59, 999);
-
-      // Fetch all daily notifications in one query
-      const { data: allNotifications } = await supabase
-        .from('daily_notifications')
-        .select('content, sent_at')
-        .eq('user_id', userId)
-        .gte('sent_at', minDate.toISOString())
-        .lte('sent_at', maxDate.toISOString())
-        .order('sent_at', { ascending: false });
-
-      // Cache daily messages
-      const notificationsMap = new Map<string, string>();
-      if (allNotifications) {
-        allNotifications.forEach(notification => {
-          const notifDate = new Date(notification.sent_at);
-          notifDate.setHours(0, 0, 0, 0);
-          const dateKey = notifDate.toISOString().split('T')[0];
-          if (!notificationsMap.has(dateKey)) {
-            notificationsMap.set(dateKey, notification.content);
-            dailyMessagesCacheRef.current.set(dateKey, notification.content);
-          }
-        });
-      }
-
-      // Map notifications to items
-      const itemsWithMessages = allItems.map(item => {
-        const itemDate = new Date(item.createdAt);
-        itemDate.setHours(0, 0, 0, 0);
-        const dateKey = itemDate.toISOString().split('T')[0];
-        return {
-          ...item,
-          dailyMessage: notificationsMap.get(dateKey) || undefined,
-        };
-      });
-
-      setHistory(itemsWithMessages);
+      setHistory(allItems);
       if (onHistoryLoaded) {
-        onHistoryLoaded(itemsWithMessages);
+        onHistoryLoaded(allItems);
       }
     } catch (error) {
       console.error('Load history error:', error);
@@ -330,8 +300,10 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
 
     const groups = new Map<string, HistoryItem[]>();
     filtered.forEach(item => {
-      const date = startOfDay(new Date(item.createdAt));
-      const dateKey = format(date, 'yyyy-MM-dd', { locale: vi });
+      // Use UTC to avoid timezone issues - match the format used for daily messages (same as admin)
+      const date = new Date(item.createdAt);
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dateKey = format(utcDate, 'yyyy-MM-dd');
       if (!groups.has(dateKey)) {
         groups.set(dateKey, []);
       }
@@ -347,8 +319,10 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
   const dateFilterOptions = useMemo(() => {
     const dates = new Set<string>();
     history.forEach(item => {
-      const date = startOfDay(new Date(item.createdAt));
-      dates.add(format(date, 'yyyy-MM-dd', { locale: vi }));
+      // Use UTC format to match dateKey in groups (same as admin)
+      const date = new Date(item.createdAt);
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      dates.add(format(utcDate, 'yyyy-MM-dd'));
     });
     
     const today = startOfDay(new Date());
@@ -496,6 +470,41 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
       channelRef.current = null;
     };
   }, [userId, supabase, batchUpdateHistory]);
+
+  // Load daily messages separately (like admin)
+  useEffect(() => {
+    async function loadDailyMessages() {
+      try {
+        const { data: allNotifications } = await supabase
+          .from('daily_notifications')
+          .select('content, sent_at')
+          .eq('user_id', userId)
+          .order('sent_at', { ascending: false });
+
+        if (allNotifications && allNotifications.length > 0) {
+          const messagesMap = new Map<string, string>();
+          allNotifications.forEach(notification => {
+            // Use UTC to avoid timezone issues (same as admin)
+            const date = new Date(notification.sent_at);
+            const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dateKey = format(utcDate, 'yyyy-MM-dd');
+            // Only keep the first (latest) notification for each date
+            if (!messagesMap.has(dateKey)) {
+              messagesMap.set(dateKey, notification.content);
+              dailyMessagesCacheRef.current.set(dateKey, notification.content);
+            }
+          });
+          setDailyMessages(messagesMap);
+        }
+      } catch (error) {
+        console.error('Load daily messages error:', error);
+      }
+    }
+
+    if (userId) {
+      loadDailyMessages();
+    }
+  }, [userId, supabase]);
 
   useEffect(() => {
     if (!cachedHistory || cachedHistory.length === 0) {
@@ -656,27 +665,16 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
                   </p>
                 </div>
 
-                {items.length > 0 && items[0].dailyMessage && (
-                  <div className="bg-gradient-to-br from-romantic-glow/20 to-romantic-accent/10 rounded-lg p-3 border border-romantic-glow/30">
-                    <div className="flex items-start space-x-2 mb-2">
-                      <span className="text-xl">✨</span>
-                      <span className="text-romantic-glow/80 text-xs font-medium">Lời nhắn yêu thương</span>
-                    </div>
-                    <p className={`text-white/90 text-sm italic leading-relaxed pl-7 ${
-                      !expandedMessages.has(`msg-${dateKey}`) ? 'line-clamp-3' : ''
-                    }`}>
-                      {items[0].dailyMessage}
-                    </p>
-                    {items[0].dailyMessage.length > 150 && (
-                      <button
-                        onClick={() => toggleMessageExpansion(`msg-${dateKey}`)}
-                        className="mt-2 text-romantic-glow/80 text-xs hover:text-romantic-glow transition-colors"
-                      >
-                        {expandedMessages.has(`msg-${dateKey}`) ? '▼ Thu gọn' : '▶ Xem thêm'}
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Daily Message (Love Message) */}
+                {(() => {
+                  const dailyMessage = dailyMessages.get(dateKey) || dailyMessagesCacheRef.current.get(dateKey);
+                  
+                  if (!dailyMessage) return null;
+                  
+                  return (
+                    <DailyMessageItem message={dailyMessage} />
+                  );
+                })()}
 
                 <div className="space-y-3 pl-2">
                   {items.map((item) => (
