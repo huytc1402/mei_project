@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { generateFingerprint } from '@/lib/utils/device';
@@ -8,7 +8,7 @@ import { generateFingerprint } from '@/lib/utils/device';
 // Force dynamic rendering - this page uses client-side auth
 export const dynamic = 'force-dynamic';
 
-export default function WelcomePage() {
+function WelcomePageContent() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -212,6 +212,21 @@ export default function WelcomePage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4" style={{ backgroundColor: '#0a0e1a' }}>
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-pulse">✨</div>
+          <p className="text-romantic-glow/70 text-sm">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <WelcomePageContent />
+    </Suspense>
   );
 }
 
