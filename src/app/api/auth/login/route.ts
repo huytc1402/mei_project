@@ -279,16 +279,21 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        // New device - check if there are any active devices
-        const { data: activeDevices } = await supabase
+        // No device with this fingerprint exists
+        // Check if user has any non-revoked devices
+        // If user has never had any non-revoked device, auto-approve (first time)
+        // If user has had devices before (even if revoked), require approval
+        const { data: anyNonRevokedDevices } = await supabase
           .from('devices')
           .select('id')
           .eq('user_id', userId)
-          .eq('is_active', true)
+          .is('revoked_at', null) // Only count non-revoked devices
           .limit(1);
 
-        const isFirstDevice = !activeDevices || activeDevices.length === 0;
-        const isActive = isFirstDevice; // Auto-approve first device
+        // If user has never had any non-revoked device, auto-approve (first time)
+        // If user has had devices before (even if revoked), require approval
+        const isFirstDeviceEver = !anyNonRevokedDevices || anyNonRevokedDevices.length === 0;
+        const isActive = isFirstDeviceEver; // Only auto-approve if truly first device
 
         // Insert new device
         const { error: insertError } = await supabase
@@ -409,13 +414,13 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // If not first device, send notification and return error
-        if (!isFirstDevice) {
+        // If not first device ever, send notification and return error (needs approval)
+        if (!isFirstDeviceEver) {
           try {
             const { TelegramService } = await import('@/services/telegram.service');
             const telegram = new TelegramService();
             await telegram.sendNewDeviceAlert(
-              `User ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
+              `Thiết bị yêu cầu duyệt lại!\nUser ID: ${userId}\nFingerprint: ${fingerprint.substring(0, 16)}...\nUser Agent: ${userAgent.substring(0, 50)}...`,
               new Date().toLocaleString('vi-VN')
             );
           } catch (telegramError) {

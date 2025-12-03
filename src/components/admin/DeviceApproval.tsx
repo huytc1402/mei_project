@@ -48,8 +48,10 @@ export function DeviceApproval() {
         });
 
         const devicesArray = Array.from(uniqueDevices.values());
-        const pending = devicesArray.filter((d) => !d.is_active);
-        const active = devicesArray.filter((d) => d.is_active);
+        // Pending devices: inactive AND not revoked (revoked_at is null)
+        const pending = devicesArray.filter((d: any) => !d.is_active && !d.revoked_at);
+        // Active devices: active
+        const active = devicesArray.filter((d: any) => d.is_active);
         
         console.log(`Found ${pending.length} pending devices, ${active.length} active devices`);
         setPendingDevices(pending);

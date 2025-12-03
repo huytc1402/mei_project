@@ -66,21 +66,29 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ success: true });
     } else if (action === 'revoke') {
-      // Revoke device - set is_active to false AND delete all related data
-      const { error: updateError } = await (supabase
-        .from('devices') as any)
-        .update({ is_active: false })
-        .eq('id', deviceId);
-
-      if (updateError) throw updateError;
-
-      // Delete all related data for this user
+      // Revoke device - set is_active to false, add revoked_at timestamp, and delete all related data
+      // Device stays in DB but won't show in pending list (revoked_at IS NOT NULL)
+      // Client must re-request approval (will create new device entry)
+      
+      // Delete all related data for this user first
       await Promise.all([
         supabase.from('reactions').delete().eq('user_id', userId),
         supabase.from('messages').delete().eq('user_id', userId),
         supabase.from('memories').delete().eq('user_id', userId),
         supabase.from('daily_notifications').delete().eq('user_id', userId),
       ]);
+
+      // Mark device as revoked (set is_active = false and revoked_at = now)
+      // This makes device disappear from pending list but keeps history
+      const { error: updateError } = await (supabase
+        .from('devices') as any)
+        .update({ 
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+        })
+        .eq('id', deviceId);
+
+      if (updateError) throw updateError;
 
       // Send Telegram notification
       try {
