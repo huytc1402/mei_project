@@ -35,14 +35,22 @@ export const NotificationToggle = memo(function NotificationToggle({ enabled, on
 
       try {
         // Subscribe to push notifications
+        console.log('🔄 Calling pushService.subscribe()...');
         const subscription = await pushService.subscribe(userId);
+        console.log('📦 Subscribe result:', subscription);
+        
         if (subscription) {
           onChange(true);
           console.log('✅ Push notification subscribed successfully:', subscription);
           alert('✅ Đã bật thông báo thành công!');
         } else {
-          console.error('❌ Subscription returned null');
-          alert('Không thể đăng ký thông báo. Vui lòng thử lại.');
+          console.error('❌ Subscription returned null - checking why...');
+          console.error('  - Check console for [PushSubscription] logs above');
+          console.error('  - Common causes:');
+          console.error('    1. Permission denied by user');
+          console.error('    2. Browser not supported');
+          console.error('    3. VAPID key not configured');
+          alert('Không thể đăng ký thông báo. Vui lòng:\n1. Cho phép thông báo khi browser hỏi\n2. Kiểm tra console để xem lỗi chi tiết');
         }
       } catch (error: any) {
         console.error('❌ Subscribe error:', error);

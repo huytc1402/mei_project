@@ -90,23 +90,39 @@ export class PushSubscriptionService {
       console.log('📝 [PushSubscription] Starting subscribe for userId:', userId);
       
       // Check support
-      if (!this.isSupported()) {
+      const isSupported = this.isSupported();
+      console.log('🔍 [PushSubscription] Support check:', {
+        serviceWorker: 'serviceWorker' in navigator,
+        PushManager: 'PushManager' in window,
+        publicVapidKey: !!this.publicVapidKey,
+        isSupported,
+      });
+      
+      if (!isSupported) {
         console.error('❌ [PushSubscription] Not supported');
-        console.error('  - serviceWorker:', 'serviceWorker' in navigator);
-        console.error('  - PushManager:', 'PushManager' in window);
-        console.error('  - publicVapidKey:', !!this.publicVapidKey);
-        return null;
+        if (!this.publicVapidKey) {
+          throw new Error('VAPID public key not configured. Please check NEXT_PUBLIC_VAPID_KEY environment variable.');
+        }
+        throw new Error('Push notifications are not supported in this browser.');
       }
       console.log('✅ [PushSubscription] Supported');
 
       // Request permission
+      console.log('🔔 [PushSubscription] Current permission:', Notification.permission);
       console.log('🔔 [PushSubscription] Requesting permission...');
       const permission = await this.requestPermission();
-      console.log('🔔 [PushSubscription] Permission:', permission);
+      console.log('🔔 [PushSubscription] Permission result:', permission);
+      
       if (permission !== 'granted') {
         console.error('❌ [PushSubscription] Permission not granted:', permission);
-        return null;
+        if (permission === 'denied') {
+          throw new Error('Notification permission was denied. Please enable notifications in your browser settings.');
+        } else if (permission === 'default') {
+          throw new Error('Notification permission not requested yet. Please try again.');
+        }
+        throw new Error(`Notification permission not granted: ${permission}`);
       }
+      console.log('✅ [PushSubscription] Permission granted');
 
       // Register service worker
       console.log('⚙️ [PushSubscription] Registering service worker...');
