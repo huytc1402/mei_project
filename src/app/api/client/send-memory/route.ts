@@ -38,6 +38,23 @@ export async function POST(request: NextRequest) {
       `✨ Cậu ấy đã nhấn "Nhớ"!\n ⏰ ${new Date().toLocaleString('vi-VN')}`
     );
 
+    // Send push notification to admin
+    const adminUserId = (adminUsers[0] as any).id;
+    const { PushNotificationService } = await import('@/services/push-notification.service');
+    const pushService = new PushNotificationService();
+    await pushService.sendNotification(adminUserId, {
+      title: '✨ Cậu ấy đã nhấn Nhớ!',
+      body: 'Cậu ấy vừa nhấn nút Nhớ cho bạn.',
+      icon: '/icon-192x192.png',
+      tag: 'memory-from-client',
+      data: {
+        url: '/admin',
+        type: 'memory',
+      },
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+    }).catch(err => console.error('Push notification error:', err)); // Fire and forget
+
     return NextResponse.json({
       success: true,
       message: 'Memory notification sent to admin',

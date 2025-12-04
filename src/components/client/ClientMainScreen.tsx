@@ -109,7 +109,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           })
           .select('id') // Select only id
           .single(),
-        // Telegram alert - fire and forget (don't wait for it)
+        // Telegram alert + Push notification - fire and forget (don't wait for it)
         fetch('/api/telegram/alert', {
           method: 'POST',
           headers: {
@@ -119,6 +119,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             type: 'reaction',
             emoji,
             timestamp: new Date().toLocaleString('vi-VN'),
+            userId, // Pass userId for push notification
           }),
         }).catch(err => console.error('Telegram alert error:', err)), // Silent fail
       ]);
@@ -144,7 +145,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           })
           .select('id') // Select only id
           .single(),
-        // Telegram alert - fire and forget
+        // Telegram alert + Push notification - fire and forget
         fetch('/api/telegram/alert', {
           method: 'POST',
           headers: {
@@ -154,6 +155,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             type: 'message',
             content,
             timestamp: new Date().toLocaleString('vi-VN'),
+            userId, // Pass userId for push notification
           }),
         }).catch(err => console.error('Telegram alert error:', err)), // Silent fail
       ]);

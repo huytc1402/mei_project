@@ -53,9 +53,21 @@ export async function POST(request: NextRequest) {
       `✨ Đã gửi "Nhớ" cho cậu ấy!\n⏰ ${new Date().toLocaleString('vi-VN')}`
     );
 
-    // Send push notification to client (via realtime)
-    const notificationService = new NotificationService();
-    await notificationService.sendMemoryNotification(clientUserId);
+    // Send push notification to client
+    const { PushNotificationService } = await import('@/services/push-notification.service');
+    const pushService = new PushNotificationService();
+    await pushService.sendNotification(clientUserId, {
+      title: '✨ Cậu ấy đã nhớ đến bạn!',
+      body: 'Cậu ấy vừa nhấn nút Nhớ. Hãy mở app để xem!',
+      icon: '/icon-192x192.png',
+      tag: 'memory-from-admin',
+      data: {
+        url: '/client',
+        type: 'memory',
+      },
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+    }).catch(err => console.error('Push notification error:', err)); // Fire and forget
 
     return NextResponse.json({
       success: true,

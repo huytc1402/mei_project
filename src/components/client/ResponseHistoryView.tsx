@@ -508,18 +508,24 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4 pb-24" style={{ backgroundColor: '#0a0e1a' }}>
-      <div className="max-w-md mx-auto space-y-6">
-        <div className="pt-6">
+    <div className="fixed inset-0 bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light" style={{ backgroundColor: '#0a0e1a' }}>
+      <div className="h-full flex flex-col max-w-md mx-auto">
+        {/* Fixed Header Section */}
+        <div className="flex-shrink-0 p-4 pt-6 space-y-4">
           <button
             onClick={onBack}
-            className="flex items-center space-x-2 text-romantic-glow/80 hover:text-romantic-glow transition-colors mb-4"
+            className="flex items-center space-x-2 text-romantic-glow/80 hover:text-romantic-glow transition-colors"
           >
             <span>←</span>
             <span>Quay lại</span>
           </button>
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-light text-white">Phản hồi của bạn</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-light text-white">Phản hồi của bạn</h1>
+              <p className="text-romantic-glow/60 text-sm mt-1">
+                {history.length} phản hồi
+              </p>
+            </div>
             {newItemsCount > 0 && (
               <div className="flex items-center gap-1.5 px-2 py-1 bg-romantic-glow/20 rounded-full animate-pulse">
                 <span className="text-xs">✨</span>
@@ -527,149 +533,150 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
               </div>
             )}
           </div>
-          <p className="text-romantic-glow/60 text-sm mt-1">
-            {history.length} phản hồi
-          </p>
+
+          {/* Fixed Filter Section */}
+          {history.length > 0 && (
+            <div className="flex items-center gap-1 sm:gap-1.5 justify-between w-full">
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
+                <button
+                  onClick={() => setFilterType('all')}
+                  className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
+                    filterType === 'all'
+                      ? 'bg-romantic-glow text-white'
+                      : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
+                  }`}
+                >
+                  Tất cả
+                </button>
+                <button
+                  onClick={() => setFilterType('reaction')}
+                  className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
+                    filterType === 'reaction'
+                      ? 'bg-romantic-glow text-white'
+                      : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
+                  }`}
+                >
+                  Emoji
+                </button>
+                <button
+                  onClick={() => setFilterType('message')}
+                  className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
+                    filterType === 'message'
+                      ? 'bg-romantic-glow text-white'
+                      : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
+                  }`}
+                >
+                  Tin nhắn
+                </button>
+                <button
+                  onClick={() => setFilterType('memory')}
+                  className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
+                    filterType === 'memory'
+                      ? 'bg-romantic-glow text-white'
+                      : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
+                  }`}
+                >
+                  Nhớ
+                </button>
+              </div>
+              
+              <div className="flex items-center flex-shrink-0">
+                <select
+                  value={selectedDate || ''}
+                  onChange={(e) => setSelectedDate(e.target.value || null)}
+                  className="date-filter-select w-8 h-8 bg-romantic-soft/50 border border-romantic-light/30 rounded-lg text-white focus:outline-none focus:border-romantic-glow/50 appearance-none cursor-pointer hover:bg-romantic-soft/70 transition-colors"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23${'2E64FE'.replace(/#/g, '')}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='6' x2='21' y2='6'/%3E%3Cline x1='7' y1='12' x2='7' y2='12'/%3E%3Cline x1='11' y1='18' x2='11' y2='18'/%3E%3Cline x1='15' y1='12' x2='15' y2='12'/%3E%3Cline x1='19' y1='6' x2='19' y2='6'/%3E%3C/svg%3E")`,
+                    backgroundPosition: 'center',
+                    backgroundSize: '1rem',
+                    backgroundRepeat: 'no-repeat',
+                    color: 'transparent',
+                  }}
+                >
+                  <option value="">📅 Tất cả ngày</option>
+                  {dateFilterOptions.recent.length > 0 && (
+                    <optgroup label="🕐 Gần đây">
+                      {dateFilterOptions.recent.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {dateFilterOptions.thisWeek.length > 0 && (
+                    <optgroup label="📆 Tuần này">
+                      {dateFilterOptions.thisWeek.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {dateFilterOptions.thisMonth.length > 0 && (
+                    <optgroup label="🗓️ Tháng này">
+                      {dateFilterOptions.thisMonth.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {dateFilterOptions.older.length > 0 && (
+                    <optgroup label="📜 Trước đó">
+                      {dateFilterOptions.older.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
-        {history.length > 0 && (
-          <div className="flex items-center gap-1 sm:gap-1.5 justify-between w-full">
-            <div className="flex items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
-              <button
-                onClick={() => setFilterType('all')}
-                className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
-                  filterType === 'all'
-                    ? 'bg-romantic-glow text-white'
-                    : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-                }`}
-              >
-                Tất cả
-              </button>
-              <button
-                onClick={() => setFilterType('reaction')}
-                className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
-                  filterType === 'reaction'
-                    ? 'bg-romantic-glow text-white'
-                    : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-                }`}
-              >
-                Emoji
-              </button>
-              <button
-                onClick={() => setFilterType('message')}
-                className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
-                  filterType === 'message'
-                    ? 'bg-romantic-glow text-white'
-                    : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-                }`}
-              >
-                Tin nhắn
-              </button>
-              <button
-                onClick={() => setFilterType('memory')}
-                className={`px-2 py-1.5 rounded-lg text-[10px] sm:text-xs transition-all whitespace-nowrap flex-shrink-0 ${
-                  filterType === 'memory'
-                    ? 'bg-romantic-glow text-white'
-                    : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
-                }`}
-              >
-                Nhớ
-              </button>
-            </div>
-            
-            <div className="flex items-center flex-shrink-0">
-              <select
-                value={selectedDate || ''}
-                onChange={(e) => setSelectedDate(e.target.value || null)}
-                className="date-filter-select w-8 h-8 bg-romantic-soft/50 border border-romantic-light/30 rounded-lg text-white focus:outline-none focus:border-romantic-glow/50 appearance-none cursor-pointer hover:bg-romantic-soft/70 transition-colors"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23${'2E64FE'.replace(/#/g, '')}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='6' x2='21' y2='6'/%3E%3Cline x1='7' y1='12' x2='7' y2='12'/%3E%3Cline x1='11' y1='18' x2='11' y2='18'/%3E%3Cline x1='15' y1='12' x2='15' y2='12'/%3E%3Cline x1='19' y1='6' x2='19' y2='6'/%3E%3C/svg%3E")`,
-                  backgroundPosition: 'center',
-                  backgroundSize: '1rem',
-                  backgroundRepeat: 'no-repeat',
-                  color: 'transparent',
-                }}
-              >
-                <option value="">📅 Tất cả ngày</option>
-                {dateFilterOptions.recent.length > 0 && (
-                  <optgroup label="🕐 Gần đây">
-                    {dateFilterOptions.recent.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {dateFilterOptions.thisWeek.length > 0 && (
-                  <optgroup label="📆 Tuần này">
-                    {dateFilterOptions.thisWeek.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {dateFilterOptions.thisMonth.length > 0 && (
-                  <optgroup label="🗓️ Tháng này">
-                    {dateFilterOptions.thisMonth.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {dateFilterOptions.older.length > 0 && (
-                  <optgroup label="📜 Trước đó">
-                    {dateFilterOptions.older.map(({ value, label }) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-          </div>
-        )}
-
+        {/* Scrollable Content Section */}
         <div 
-          className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar"
+          className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar"
           style={{
             contain: 'layout style paint',
             willChange: 'scroll-position',
             overscrollBehavior: 'contain',
           }}
         >
-          {history.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-romantic-glow/60 text-sm">Chưa có phản hồi nào</p>
-            </div>
-          ) : filteredAndGroupedItems.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-romantic-glow/60 text-sm">Không có phản hồi phù hợp với bộ lọc</p>
-            </div>
-          ) : (
-            filteredAndGroupedItems.map(([dateKey, items]) => (
-              <div key={dateKey} className="space-y-3">
-                <div className="sticky top-0 bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20 z-10">
-                  <h3 className="text-romantic-glow font-medium text-sm">
-                    {format(new Date(dateKey), 'EEEE, dd MMMM yyyy', { locale: vi })}
-                  </h3>
-                  <p className="text-romantic-glow/60 text-xs mt-0.5">
-                    {items.length} {items.length === 1 ? 'phản hồi' : 'phản hồi'}
-                  </p>
-                </div>
-
-                {/* Daily Message (Love Message) */}
-                {dailyMessages.get(dateKey) && (
-                  <DailyMessageItem message={dailyMessages.get(dateKey)!} />
-                )}
-
-                <div className="space-y-3 pl-2">
-                  {items.map((item) => (
-                    <HistoryItemComponent
-                      key={item.id}
-                      item={item}
-                      expandedMessages={expandedMessages}
-                      onToggleExpand={toggleMessageExpansion}
-                    />
-                  ))}
-                </div>
+          <div className="space-y-4 pt-2">
+            {history.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-romantic-glow/60 text-sm">Chưa có phản hồi nào</p>
               </div>
-            ))
-          )}
+            ) : filteredAndGroupedItems.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-romantic-glow/60 text-sm">Không có phản hồi phù hợp với bộ lọc</p>
+              </div>
+            ) : (
+              filteredAndGroupedItems.map(([dateKey, items]) => (
+                <div key={dateKey} className="space-y-3">
+                  <div className="sticky top-0 bg-romantic-soft/60 backdrop-blur-sm rounded-lg px-3 py-2 border border-romantic-glow/20 z-10">
+                    <h3 className="text-romantic-glow font-medium text-sm">
+                      {format(new Date(dateKey), 'EEEE, dd MMMM yyyy', { locale: vi })}
+                    </h3>
+                    <p className="text-romantic-glow/60 text-xs mt-0.5">
+                      {items.length} {items.length === 1 ? 'phản hồi' : 'phản hồi'}
+                    </p>
+                  </div>
+
+                  {/* Daily Message (Love Message) */}
+                  {dailyMessages.get(dateKey) && (
+                    <DailyMessageItem message={dailyMessages.get(dateKey)!} />
+                  )}
+
+                  <div className="space-y-3 pl-2">
+                    {items.map((item) => (
+                      <HistoryItemComponent
+                        key={item.id}
+                        item={item}
+                        expandedMessages={expandedMessages}
+                        onToggleExpand={toggleMessageExpansion}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

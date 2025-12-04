@@ -108,6 +108,66 @@ CREATE TABLE IF NOT EXISTS public.notification_schedules (
 CREATE INDEX IF NOT EXISTS notification_schedules_active_idx ON public.notification_schedules (is_active) WHERE is_active = true;
 
 -- ============================================
+-- 7. PUSH SUBSCRIPTIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  endpoint text NOT NULL,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  user_agent text,
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE,
+  CONSTRAINT push_subscriptions_unique UNIQUE (user_id, endpoint)
+);
+
+-- Indexes for push subscriptions
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_id_idx ON public.push_subscriptions (user_id);
+CREATE INDEX IF NOT EXISTS push_subscriptions_active_idx ON public.push_subscriptions (is_active) WHERE is_active = true;
+
+-- ============================================
+-- 8. NOTIFICATION LOGS TABLE (for spam prevention)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.notification_logs (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  notification_type text NOT NULL CHECK (notification_type = ANY (ARRAY['memory'::text, 'message'::text, 'reaction'::text, 'daily'::text])),
+  sent_at timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT notification_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
+);
+
+-- Indexes for notification logs
+CREATE INDEX IF NOT EXISTS notification_logs_user_id_idx ON public.notification_logs (user_id);
+CREATE INDEX IF NOT EXISTS notification_logs_sent_at_idx ON public.notification_logs (sent_at DESC);
+CREATE INDEX IF NOT EXISTS notification_logs_user_type_sent_idx ON public.notification_logs (user_id, notification_type, sent_at DESC);
+
+-- ============================================
+-- 9. NOTIFICATION PREFERENCES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.notification_preferences (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL UNIQUE,
+  enable_memory boolean NOT NULL DEFAULT true,
+  enable_message boolean NOT NULL DEFAULT true,
+  enable_reaction boolean NOT NULL DEFAULT true,
+  enable_daily boolean NOT NULL DEFAULT false,
+  silent_hours_start integer DEFAULT 22 CHECK (silent_hours_start >= 0 AND silent_hours_start <= 23),
+  silent_hours_end integer DEFAULT 7 CHECK (silent_hours_end >= 0 AND silent_hours_end <= 23),
+  created_at timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at timestamp with time zone DEFAULT now() NOT NULL,
+  CONSTRAINT notification_preferences_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
+);
+
+-- Index for notification preferences
+CREATE INDEX IF NOT EXISTS notification_preferences_user_id_idx ON public.notification_preferences (user_id);
+
+-- ============================================
 -- ENABLE REALTIME (Supabase specific)
 -- ============================================
 -- Enable realtime for tables that need it
@@ -140,6 +200,6 @@ END $$;
 DO $$
 BEGIN
   RAISE NOTICE '✅ Database schema created successfully!';
-  RAISE NOTICE '📊 Tables created: users, memories, messages, reactions, daily_notifications, notification_schedules';
+  RAISE NOTICE '📊 Tables created: users, memories, messages, reactions, daily_notifications, notification_schedules, push_subscriptions, notification_logs, notification_preferences';
   RAISE NOTICE '🔍 Indexes and constraints applied for optimal performance';
 END $$;
