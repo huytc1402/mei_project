@@ -456,6 +456,70 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     }
   }, [showMemoryTooltip]);
 
+  // Auto-subscribe to push notifications when user logs in
+  useEffect(() => {
+    const autoSubscribe = async () => {
+      if (!userId) return;
+
+      try {
+        const { PushSubscriptionService } = await import('@/services/push-subscription.service');
+        const pushService = new PushSubscriptionService();
+
+        if (!pushService.isSupported()) {
+          console.log('Push notifications not supported');
+          return;
+        }
+
+        // Check if already subscribed
+        const existingSubscription = await pushService.getSubscription();
+        if (existingSubscription) {
+          // Already subscribed, verify it's saved on server
+          const userAgent = navigator.userAgent;
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              subscription: existingSubscription,
+              userAgent,
+            }),
+          }).catch(() => {
+            // Silent fail
+          });
+          setNotificationsEnabled(true);
+          return;
+        }
+
+        // Check permission
+        if (Notification.permission === 'default') {
+          // Permission not yet requested, wait for user to toggle
+          return;
+        }
+
+        if (Notification.permission === 'granted') {
+          // Permission granted, auto-subscribe
+          const subscription = await pushService.subscribe(userId);
+          if (subscription) {
+            setNotificationsEnabled(true);
+            console.log('✅ Auto-subscribed to push notifications');
+          }
+        }
+      } catch (error) {
+        console.error('Auto-subscribe error:', error);
+        // Silent fail - user can manually subscribe via toggle
+      }
+    };
+
+    // Wait a bit for service worker to be ready
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        setTimeout(autoSubscribe, 2000);
+      });
+    }
+  }, [userId]);
+
   useEffect(() => {
     loadDailyMessage();
     loadAdminMemoryCount();
@@ -578,6 +642,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           <NotificationToggle
             enabled={notificationsEnabled}
             onChange={setNotificationsEnabled}
+            userId={userId}
           />
 
           {/* Admin memory count and History button */}

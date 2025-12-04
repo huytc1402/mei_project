@@ -1,32 +1,60 @@
 'use client';
 
 import { useCallback, memo } from 'react';
+import { PushSubscriptionService } from '@/services/push-subscription.service';
 
 interface NotificationToggleProps {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
+  userId?: string | null;
 }
 
-export const NotificationToggle = memo(function NotificationToggle({ enabled, onChange }: NotificationToggleProps) {
+export const NotificationToggle = memo(function NotificationToggle({ enabled, onChange, userId }: NotificationToggleProps) {
+  const pushService = new PushSubscriptionService();
+
   const handleToggle = useCallback(async () => {
     if (!enabled) {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        onChange(true);
-        // Register service worker for push notifications
-        if ('serviceWorker' in navigator) {
-          try {
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            console.log('Service Worker registered:', registration);
-          } catch (error) {
-            console.error('Service Worker registration failed:', error);
-          }
+      // Check if push notifications are supported
+      if (!pushService.isSupported()) {
+        alert('Trình duyệt của bạn không hỗ trợ push notifications');
+        return;
+      }
+
+      if (!userId) {
+        alert('Vui lòng đăng nhập để bật thông báo');
+        return;
+      }
+
+      try {
+        // Subscribe to push notifications
+        const subscription = await pushService.subscribe(userId);
+        if (subscription) {
+          onChange(true);
+          console.log('✅ Push notification subscribed successfully');
+        } else {
+          alert('Không thể đăng ký thông báo. Vui lòng thử lại.');
+        }
+      } catch (error: any) {
+        console.error('Subscribe error:', error);
+        if (error.message?.includes('permission')) {
+          alert('Vui lòng cho phép thông báo trong cài đặt trình duyệt');
+        } else {
+          alert('Có lỗi xảy ra khi đăng ký thông báo: ' + (error.message || 'Unknown error'));
         }
       }
     } else {
-      onChange(false);
+      // Unsubscribe
+      if (userId) {
+        try {
+          await pushService.unsubscribe(userId);
+          onChange(false);
+          console.log('✅ Push notification unsubscribed');
+        } catch (error) {
+          console.error('Unsubscribe error:', error);
+        }
+      }
     }
-  }, [enabled, onChange]);
+  }, [enabled, onChange, userId, pushService]);
 
   return (
     <div className="flex items-center justify-between bg-gradient-to-r from-romantic-soft/50 to-romantic-light/30 rounded-xl p-4 border border-romantic-glow/20 backdrop-blur-sm shadow-lg">
