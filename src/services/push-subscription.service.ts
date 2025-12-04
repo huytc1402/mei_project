@@ -87,35 +87,49 @@ export class PushSubscriptionService {
    */
   async subscribe(userId: string): Promise<PushSubscriptionData | null> {
     try {
+      console.log('📝 [PushSubscription] Starting subscribe for userId:', userId);
+      
       // Check support
       if (!this.isSupported()) {
-        console.warn('Push notifications are not supported');
+        console.error('❌ [PushSubscription] Not supported');
+        console.error('  - serviceWorker:', 'serviceWorker' in navigator);
+        console.error('  - PushManager:', 'PushManager' in window);
+        console.error('  - publicVapidKey:', !!this.publicVapidKey);
         return null;
       }
+      console.log('✅ [PushSubscription] Supported');
 
       // Request permission
+      console.log('🔔 [PushSubscription] Requesting permission...');
       const permission = await this.requestPermission();
+      console.log('🔔 [PushSubscription] Permission:', permission);
       if (permission !== 'granted') {
-        console.warn('Notification permission not granted');
+        console.error('❌ [PushSubscription] Permission not granted:', permission);
         return null;
       }
 
       // Register service worker
+      console.log('⚙️ [PushSubscription] Registering service worker...');
       const registration = await this.registerServiceWorker();
+      console.log('✅ [PushSubscription] Service worker registered:', registration);
 
       // Get existing subscription or create new one
+      console.log('🔍 [PushSubscription] Checking existing subscription...');
       let subscription = await registration.pushManager.getSubscription();
+      console.log('🔍 [PushSubscription] Existing subscription:', subscription ? 'Found' : 'Not found');
 
       if (!subscription) {
         if (!this.publicVapidKey) {
+          console.error('❌ [PushSubscription] VAPID public key not configured');
           throw new Error('VAPID public key not configured');
         }
-
+        console.log('🔑 [PushSubscription] Creating new subscription with VAPID key...');
         const applicationServerKey = this.urlBase64ToUint8Array(this.publicVapidKey);
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: applicationServerKey as any,
         });
+        console.log('✅ [PushSubscription] New subscription created:', subscription.endpoint);
       }
 
       // Convert subscription to JSON format
@@ -126,8 +140,10 @@ export class PushSubscriptionService {
           auth: this.arrayBufferToBase64(subscription.getKey('auth')!),
         },
       };
+      console.log('📦 [PushSubscription] Subscription data prepared');
 
       // Send subscription to server
+      console.log('📤 [PushSubscription] Sending subscription to server...');
       const userAgent = navigator.userAgent;
       const response = await fetch('/api/push/subscribe', {
         method: 'POST',
@@ -141,13 +157,21 @@ export class PushSubscriptionService {
         }),
       });
 
+      console.log('📥 [PushSubscription] Server response:', response.status, response.statusText);
+      
       if (!response.ok) {
-        throw new Error('Failed to save subscription');
+        const errorText = await response.text();
+        console.error('❌ [PushSubscription] Server error:', errorText);
+        throw new Error(`Failed to save subscription: ${response.status} ${errorText}`);
       }
 
+      const result = await response.json();
+      console.log('✅ [PushSubscription] Subscription saved to server:', result);
       return subscriptionData;
     } catch (error: any) {
-      console.error('Subscribe error:', error);
+      console.error('❌ [PushSubscription] Subscribe error:', error);
+      console.error('  - Message:', error.message);
+      console.error('  - Stack:', error.stack);
       throw error;
     }
   }

@@ -51,7 +51,14 @@ export class PushNotificationService {
     userAgent?: string
   ): Promise<void> {
     try {
-      const { error } = await this.supabase
+      console.log('💾 [PushNotificationService] Saving subscription:', {
+        userId,
+        endpoint: subscription.endpoint.substring(0, 50) + '...',
+        hasKeys: !!subscription.keys,
+        userAgent,
+      });
+
+      const { error, data } = await this.supabase
         .from('push_subscriptions')
         .upsert({
           user_id: userId,
@@ -65,9 +72,14 @@ export class PushNotificationService {
           onConflict: 'user_id,endpoint',
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [PushNotificationService] Database error:', error);
+        throw error;
+      }
+
+      console.log('✅ [PushNotificationService] Subscription saved:', data);
     } catch (error) {
-      console.error('Error saving subscription:', error);
+      console.error('❌ [PushNotificationService] Error saving subscription:', error);
       throw error;
     }
   }
