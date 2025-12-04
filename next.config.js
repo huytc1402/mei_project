@@ -5,18 +5,8 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   swSrc: 'public/sw-custom.js',
   sw: 'sw.js',
-  runtimeCaching: [
-    {
-      urlPattern: /^https?.*/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'offlineCache',
-        expiration: {
-          maxEntries: 200,
-        },
-      },
-    },
-  ],
+  // Note: runtimeCaching is not allowed when using swSrc
+  // Caching is handled in the custom service worker
 });
 
 /** @type {import('next').NextConfig} */

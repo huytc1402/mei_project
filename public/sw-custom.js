@@ -1,28 +1,30 @@
 // Custom Service Worker with Workbox and Push Notification handlers
+// Import Workbox from CDN
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
+
+// Skip waiting and claim clients immediately
+self.skipWaiting();
+self.clients.claim();
 
 // Workbox configuration
 if (workbox) {
   console.log('✅ Workbox loaded');
 
-  // Precache
-  workbox.precaching.precacheAndRoute([
-    { url: '/', revision: null },
-    { url: '/icon-192x192.png', revision: null },
-    { url: '/icon-512x512.png', revision: null },
-    { url: '/manifest.json', revision: null },
-  ]);
+  // Precache assets (injected by next-pwa during build)
+  // self.__WB_MANIFEST is automatically injected by next-pwa
+  // Just use it directly - next-pwa will replace it with the manifest
+  workbox.precaching.precacheAndRoute(self.__WB_MANIFEST);
 
   // Cache strategies
   workbox.routing.registerRoute(
-    '/',
+    ({ request }) => request.mode === 'navigate',
     new workbox.strategies.NetworkFirst({
       cacheName: 'start-url',
     })
   );
 
   workbox.routing.registerRoute(
-    /^https?.*/,
+    ({ url }) => url.protocol === 'http:' || url.protocol === 'https:',
     new workbox.strategies.NetworkFirst({
       cacheName: 'offlineCache',
       plugins: [
