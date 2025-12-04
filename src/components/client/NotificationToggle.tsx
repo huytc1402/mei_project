@@ -16,8 +16,10 @@ export const NotificationToggle = memo(function NotificationToggle({ enabled, on
     console.log('🔔 NotificationToggle clicked, enabled:', enabled, 'userId:', userId);
     
     if (!enabled) {
+      // Enable notifications - Subscribe
+      console.log('📝 Starting subscription process...');
+      
       // Check if push notifications are supported
-      console.log('🔍 Checking push notification support...');
       if (!pushService.isSupported()) {
         console.error('❌ Push notifications not supported');
         alert('Trình duyệt của bạn không hỗ trợ push notifications');
@@ -32,7 +34,6 @@ export const NotificationToggle = memo(function NotificationToggle({ enabled, on
       }
 
       try {
-        console.log('📝 Starting subscription process...');
         // Subscribe to push notifications
         const subscription = await pushService.subscribe(userId);
         if (subscription) {
@@ -57,18 +58,56 @@ export const NotificationToggle = memo(function NotificationToggle({ enabled, on
         }
       }
     } else {
-      // Unsubscribe
+      // Disable notifications - Unsubscribe
       console.log('📝 Starting unsubscribe process...');
-      if (userId) {
-        try {
-          await pushService.unsubscribe(userId);
-          onChange(false);
-          console.log('✅ Push notification unsubscribed');
-          alert('✅ Đã tắt thông báo');
-        } catch (error) {
-          console.error('❌ Unsubscribe error:', error);
-          alert('Có lỗi khi tắt thông báo');
+      
+      if (!userId) {
+        console.error('❌ No userId for unsubscribe');
+        return;
+      }
+
+      try {
+        console.log('🔍 Checking current subscription...');
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        
+        if (subscription) {
+          console.log('📤 Unsubscribing from push service...');
+          await subscription.unsubscribe();
+          console.log('✅ Unsubscribed from push service');
+          
+          // Notify server
+          console.log('📤 Notifying server of unsubscribe...');
+          const unsubscribeResponse = await fetch('/api/push/unsubscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              endpoint: subscription.endpoint,
+            }),
+          });
+          
+          console.log('📥 Unsubscribe server response:', unsubscribeResponse.status);
+          if (!unsubscribeResponse.ok) {
+            console.error('❌ Server unsubscribe failed');
+          }
+        } else {
+          console.log('⚠️ No subscription found to unsubscribe');
         }
+        
+        onChange(false);
+        console.log('✅ Push notification unsubscribed successfully');
+        alert('✅ Đã tắt thông báo');
+      } catch (error: any) {
+        console.error('❌ Unsubscribe error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        });
+        alert('Có lỗi khi tắt thông báo: ' + (error.message || 'Unknown error'));
       }
     }
   }, [enabled, onChange, userId, pushService]);

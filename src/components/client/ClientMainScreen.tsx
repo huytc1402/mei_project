@@ -17,7 +17,7 @@ interface ClientMainScreenProps {
 export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   const [currentMessage, setCurrentMessage] = useState<Message | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [adminMemoryCount, setAdminMemoryCount] = useState(0);
   const [historyCache, setHistoryCache] = useState<any[] | null>(null); // Cache history data
@@ -389,10 +389,29 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   }, []);
 
   const checkNotificationPermission = useCallback(async () => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      setNotificationsEnabled(true);
+    // Check actual subscription status, not just permission
+    try {
+      if (!('serviceWorker' in navigator) || !userId) {
+        setNotificationsEnabled(false);
+        return;
+      }
+
+      const { PushSubscriptionService } = await import('@/services/push-subscription.service');
+      const pushService = new PushSubscriptionService();
+      
+      if (!pushService.isSupported()) {
+        setNotificationsEnabled(false);
+        return;
+      }
+
+      const subscription = await pushService.getSubscription();
+      setNotificationsEnabled(!!subscription);
+      console.log('🔍 Notification status checked:', !!subscription ? 'Subscribed' : 'Not subscribed');
+    } catch (error) {
+      console.error('Error checking notification status:', error);
+      setNotificationsEnabled(false);
     }
-  }, []);
+  }, [userId]);
 
   const loadAdminMemoryCount = useCallback(async () => {
     try {
