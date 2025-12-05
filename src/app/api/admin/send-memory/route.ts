@@ -54,11 +54,12 @@ export async function POST(request: NextRequest) {
     );
 
     // Send push notification to client
+    // Simple notification: "Tớ nhớ cậu"
     const { PushNotificationService } = await import('@/services/push-notification.service');
     const pushService = new PushNotificationService();
     await pushService.sendNotification(clientUserId, {
-      title: '✨ Cậu ấy đã nhớ đến bạn!',
-      body: 'Cậu ấy vừa nhấn nút Nhớ. Hãy mở app để xem!',
+      title: '✨ Tớ nhớ cậu',
+      body: 'Tớ nhớ cậu 💕',
       icon: '/icon-192x192.png',
       tag: `memory-${Date.now()}`, // Format: "memory-timestamp" for rate limiting
       data: {

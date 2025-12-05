@@ -114,14 +114,26 @@ export class PushSubscriptionService {
       console.log('✅ [PushSubscription] Supported');
 
       // Request permission
+      // For Android, we need to request permission before service worker registration
       console.log('🔔 [PushSubscription] Current permission:', Notification.permission);
-      console.log('🔔 [PushSubscription] Requesting permission...');
-      const permission = await this.requestPermission();
-      console.log('🔔 [PushSubscription] Permission result:', permission);
+      
+      let permission = Notification.permission;
+      
+      // If permission is default, request it
+      if (permission === 'default') {
+        console.log('🔔 [PushSubscription] Requesting permission...');
+        permission = await this.requestPermission();
+        console.log('🔔 [PushSubscription] Permission result:', permission);
+      }
       
       if (permission !== 'granted') {
         console.error('❌ [PushSubscription] Permission not granted:', permission);
         if (permission === 'denied') {
+          // For Android, provide more helpful error message
+          const isAndroid = /Android/i.test(navigator.userAgent);
+          if (isAndroid) {
+            throw new Error('Thông báo đã bị từ chối. Vui lòng:\n1. Mở Cài đặt trình duyệt\n2. Tìm "Thông báo" hoặc "Notifications"\n3. Bật thông báo cho trang web này\n4. Quay lại và thử lại');
+          }
           throw new Error('Notification permission was denied. Please enable notifications in your browser settings.');
         } else if (permission === 'default') {
           throw new Error('Notification permission not requested yet. Please try again.');

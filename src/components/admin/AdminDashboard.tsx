@@ -8,6 +8,7 @@ import { NotificationScheduler } from './NotificationScheduler';
 import { HistoryView } from './HistoryView';
 import { RealtimeAlerts } from './RealtimeAlerts';
 import { SendMemory } from './SendMemory';
+import { NotificationToggle } from '@/components/client/NotificationToggle';
 
 interface AdminDashboardProps {
   userId: string;
@@ -25,6 +26,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
     memories: [],
   });
   const [glowEffect, setGlowEffect] = useState(false); // For glow effect when client sends memory
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
 
@@ -255,6 +257,80 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
     };
   }, [supabase, showClientReactionNotification, showClientMessageNotification, showClientMemoryNotification]);
 
+  // Check notification status for admin
+  useEffect(() => {
+    const checkNotificationStatus = async () => {
+      if (!userId) return;
+
+      try {
+        if (!('serviceWorker' in navigator)) {
+          setNotificationsEnabled(false);
+          return;
+        }
+
+        const { PushSubscriptionService } = await import('@/services/push-subscription.service');
+        const pushService = new PushSubscriptionService();
+
+        if (!pushService.isSupported()) {
+          setNotificationsEnabled(false);
+          return;
+        }
+
+        // Check if already subscribed
+        const existingSubscription = await pushService.getSubscription();
+        if (existingSubscription) {
+          // Already subscribed, verify it's saved on server
+          const userAgent = navigator.userAgent;
+          await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              subscription: existingSubscription,
+              userAgent,
+            }),
+          }).catch(() => {
+            // Silent fail
+          });
+          setNotificationsEnabled(true);
+          return;
+        }
+
+        // Check permission status
+        if (Notification.permission === 'granted') {
+          // Permission granted but not subscribed - try auto-subscribe
+          try {
+            const subscription = await pushService.subscribe(userId);
+            if (subscription) {
+              console.log('✅ Admin auto-subscribed to push notifications');
+              setNotificationsEnabled(true);
+            }
+          } catch (error) {
+            console.error('Admin auto-subscribe error:', error);
+            setNotificationsEnabled(false);
+          }
+        } else if (Notification.permission === 'denied') {
+          setNotificationsEnabled(false);
+        } else {
+          // Permission default - not subscribed yet
+          setNotificationsEnabled(false);
+        }
+      } catch (error) {
+        console.error('Check notification status error:', error);
+        setNotificationsEnabled(false);
+      }
+    };
+
+    // Wait a bit for service worker to be ready
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        setTimeout(checkNotificationStatus, 2000);
+      });
+    }
+  }, [userId]);
+
   useEffect(() => {
     const cleanup = setupRealtime();
     loadInitialData();
@@ -330,6 +406,13 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-light text-white mb-2">Admin Dashboard</h1>
+          <div className="mt-4">
+            <NotificationToggle
+              enabled={notificationsEnabled}
+              onChange={setNotificationsEnabled}
+              userId={userId}
+            />
+          </div>
         </div>
 
         <div className="flex space-x-2 mb-6 bg-romantic-soft/30 rounded-lg p-1">

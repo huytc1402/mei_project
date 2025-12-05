@@ -493,11 +493,14 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
     };
   }, [userId, supabase, batchUpdateHistory]);
 
+  // Load history only once when component mounts and no cached history
   useEffect(() => {
-    if (!cachedHistory || cachedHistory.length === 0) {
+    // Only load if we don't have cached history and haven't loaded yet
+    if ((!cachedHistory || cachedHistory.length === 0) && history.length === 0 && !loading) {
       loadHistory();
     }
-  }, [loadHistory, cachedHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   if (loading) {
     return (

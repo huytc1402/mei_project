@@ -263,8 +263,8 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             setGlowEffect(true);
             setTimeout(() => setGlowEffect(false), 4000);
             
-            // Show notification to client
-            showAdminMemoryNotificationRef.current?.();
+            // Don't show local notification - push notification from server is enough
+            // showAdminMemoryNotificationRef.current?.();
           }
         }
       )
