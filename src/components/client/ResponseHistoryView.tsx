@@ -144,6 +144,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
   const updateQueueRef = useRef<HistoryItem[]>([]);
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastHistoryLengthRef = useRef(history.length);
+  const hasLoadedRef = useRef(false); // Flag to prevent multiple loads
   
   const toggleMessageExpansion = useCallback((id: string) => {
     setExpandedMessages(prev => {
@@ -223,7 +224,14 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
   }, [onHistoryLoaded]);
 
   const loadHistory = useCallback(async () => {
+    // Prevent multiple loads
+    if (hasLoadedRef.current) {
+      return;
+    }
+    
     setLoading(true);
+    hasLoadedRef.current = true;
+    
     try {
       const [reactionsRes, messagesRes, memoriesRes] = await Promise.all([
         supabase
@@ -277,6 +285,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
       }
     } catch (error) {
       console.error('Load history error:', error);
+      hasLoadedRef.current = false; // Allow retry on error
     } finally {
       setLoading(false);
     }
@@ -495,8 +504,16 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
 
   // Load history only once when component mounts and no cached history
   useEffect(() => {
+    // If we have cached history, use it and mark as loaded
+    if (cachedHistory && cachedHistory.length > 0) {
+      setHistory(cachedHistory);
+      hasLoadedRef.current = true;
+      setLoading(false);
+      return;
+    }
+    
     // Only load if we don't have cached history and haven't loaded yet
-    if ((!cachedHistory || cachedHistory.length === 0) && history.length === 0 && !loading) {
+    if (!hasLoadedRef.current && history.length === 0 && !loading) {
       loadHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/Toast';
 
 export function SendMemory() {
+  const router = useRouter();
   const [isSending, setIsSending] = useState(false);
   const [lastSent, setLastSent] = useState<Date | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -11,6 +15,7 @@ export function SendMemory() {
   const COOLDOWN_SECONDS = 3;
   const supabase = createClient();
   const channelRef = useRef<any>(null);
+  const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
     loadClientMemoryCount();
@@ -107,6 +112,10 @@ export function SendMemory() {
         setLastSent(new Date());
         // Reload client memory count after sending
         await loadClientMemoryCount();
+        // Navigate to Secret Garden
+        setTimeout(() => {
+          router.push('/garden');
+        }, 1000);
         // Re-enable after cooldown
         setTimeout(() => {
           setIsSending(false);
@@ -115,18 +124,20 @@ export function SendMemory() {
       } else {
         setIsSending(false);
         setCooldown(0);
-        alert('Gửi thất bại: ' + (result.error || 'Unknown error'));
+        showToast('Gửi thất bại: ' + (result.error || 'Unknown error'), 'error');
       }
     } catch (error) {
       console.error('Send memory error:', error);
       setIsSending(false);
       setCooldown(0);
-      alert('Có lỗi xảy ra khi gửi');
+      showToast('Có lỗi xảy ra khi gửi', 'error');
     }
   }
 
   return (
-    <div className="bg-gradient-to-br from-romantic-soft/50 to-romantic-light/30 rounded-2xl p-6 border border-romantic-glow/30 backdrop-blur-sm shadow-lg">
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="bg-gradient-to-br from-romantic-soft/50 to-romantic-light/30 rounded-2xl p-6 border border-romantic-glow/30 backdrop-blur-sm shadow-lg">
       <div className="flex items-center justify-between mb-4">
 
         {clientMemoryCount > 0 && (
@@ -179,6 +190,7 @@ export function SendMemory() {
       </div>
 
     </div>
+    </>
   );
 }
 

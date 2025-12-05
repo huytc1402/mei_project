@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface MemoryButtonProps {
   onMemory: () => Promise<void>;
 }
 
 export const MemoryButton = memo(function MemoryButton({ onMemory }: MemoryButtonProps) {
+  const router = useRouter();
   const [isSending, setIsSending] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -56,6 +58,11 @@ export const MemoryButton = memo(function MemoryButton({ onMemory }: MemoryButto
 
       // Show success popup
       setShowSuccessPopup(true);
+
+      // Navigate to Secret Garden after a short delay
+      setTimeout(() => {
+        router.push('/garden');
+      }, 1500);
     } catch (error) {
       console.error('Error sending memory:', error);
     } finally {

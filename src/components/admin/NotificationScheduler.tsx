@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { NotificationSchedule } from '@/types';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/Toast';
 
 export function NotificationScheduler() {
   const [schedules, setSchedules] = useState<NotificationSchedule[]>([]);
   const [time, setTime] = useState('08:00');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+  const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
     loadSchedules();
@@ -39,7 +42,7 @@ export function NotificationScheduler() {
       setSchedules(mappedData);
     } catch (error: any) {
       console.error('Load schedules error:', error);
-      alert('Có lỗi xảy ra khi tải lịch: ' + (error.message || 'Unknown error'));
+      showToast('Có lỗi xảy ra khi tải lịch: ' + (error.message || 'Unknown error'), 'error');
     }
   }
 
@@ -47,12 +50,12 @@ export function NotificationScheduler() {
     // Check if time already exists
     const existingSchedule = schedules.find(s => s.time === time);
     if (existingSchedule) {
-      alert('Giờ này đã được đặt rồi. Vui lòng chọn giờ khác.');
+      showToast('Giờ này đã được đặt rồi. Vui lòng chọn giờ khác.', 'error');
       return;
     }
 
     if (!time || time.length === 0) {
-      alert('Vui lòng chọn giờ.');
+      showToast('Vui lòng chọn giờ.', 'error');
       return;
     }
 
@@ -75,9 +78,10 @@ export function NotificationScheduler() {
       console.log('Schedule added successfully:', data);
       await loadSchedules();
       setTime('08:00');
+      showToast('✅ Đã thêm lịch thông báo thành công!', 'success');
     } catch (error: any) {
       console.error('Add schedule error:', error);
-      alert('Có lỗi xảy ra khi thêm lịch: ' + (error.message || 'Unknown error'));
+      showToast('Có lỗi xảy ra khi thêm lịch: ' + (error.message || 'Unknown error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -102,7 +106,9 @@ export function NotificationScheduler() {
   }
 
   return (
-    <div className="bg-romantic-soft/40 rounded-2xl p-6 border border-romantic-light/30">
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="bg-romantic-soft/40 rounded-2xl p-6 border border-romantic-light/30">
       <h2 className="text-xl font-light text-white mb-4">Lịch thông báo hằng ngày</h2>
 
       <div className="space-y-4 mb-6">
@@ -172,6 +178,7 @@ export function NotificationScheduler() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

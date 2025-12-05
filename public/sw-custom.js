@@ -170,24 +170,45 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const notificationData = event.notification.data || {};
-  const urlToOpen = notificationData.url || '/';
+  let urlToOpen = notificationData.url || '/';
+  
+  // If it's a memory notification, navigate to Secret Garden
+  if (notificationData.type === 'memory') {
+    urlToOpen = '/garden';
+  }
 
   event.waitUntil(
     self.clients.matchAll({
       type: 'window',
       includeUncontrolled: true,
     }).then((clientList) => {
-      // Check if there's already a window/tab open with the target URL
+      // Check if there's already a window/tab open
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url && (client.url.includes(urlToOpen) || urlToOpen === '/')) {
-          if ('focus' in client) {
-            return client.focus();
+        if (client.url && 'focus' in client) {
+          // Focus existing window and post message to navigate
+          client.focus();
+          // Post message to the client to trigger navigation
+          // The client-side code should listen for this message and use Next.js router
+          if (client.postMessage) {
+            client.postMessage({
+              type: 'NAVIGATE',
+              url: urlToOpen,
+            });
           }
+          return Promise.resolve();
         }
       }
       
       // If no window is open, open a new one
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+      
+      return Promise.resolve();
+    }).catch((error) => {
+      console.error('Error handling notification click:', error);
+      // Fallback: try to open window directly
       if (self.clients.openWindow) {
         return self.clients.openWindow(urlToOpen);
       }

@@ -9,6 +9,8 @@ import { HistoryView } from './HistoryView';
 import { RealtimeAlerts } from './RealtimeAlerts';
 import { SendMemory } from './SendMemory';
 import { NotificationToggle } from '@/components/client/NotificationToggle';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/Toast';
 
 interface AdminDashboardProps {
   userId: string;
@@ -29,25 +31,27 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
+  const { toasts, showToast, removeToast } = useToast();
 
   const loadInitialData = useCallback(async () => {
     // Parallelize queries and select only needed fields
+    // Increased limit to load more data so it persists after reload
     const [reactionsResult, messagesResult, memoriesResult] = await Promise.all([
       supabase
         .from('reactions')
         .select('id, user_id, emoji, created_at') // Select only needed fields
         .order('created_at', { ascending: false })
-        .limit(10),
+        .limit(50), // Increased from 10 to 50
       supabase
         .from('messages')
         .select('id, user_id, content, type, emoji, created_at') // Select only needed fields
         .order('created_at', { ascending: false })
-        .limit(10),
+        .limit(50), // Increased from 10 to 50
       supabase
         .from('memories')
         .select('id, user_id, sender_role, created_at') // Select only needed fields including sender_role
         .order('created_at', { ascending: false })
-        .limit(10),
+        .limit(50), // Increased from 10 to 50
     ]);
 
     const reactions = reactionsResult.data || [];
@@ -79,62 +83,8 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
     });
   }, [supabase]);
 
-  const showClientReactionNotification = useCallback(async (emoji: string) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification('❤️ Cậu ấy đã phản hồi', {
-          body: `Cậu ấy đã gửi ${emoji}`,
-          icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png',
-          tag: 'client-reaction',
-          requireInteraction: false,
-          // @ts-expect-error: 'vibrate' is not in NotificationOptions type but works in browsers supporting it
-          vibrate: [200, 100, 200],
-        });
-      } catch (error) {
-        console.error('Reaction notification error:', error);
-      }
-    }
-  }, []);
-
-  const showClientMessageNotification = useCallback(async (content: string) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification('💬 Tin nhắn mới', {
-          body: content.length > 50 ? content.substring(0, 50) + '...' : content,
-          icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png',
-          tag: 'client-message',
-          requireInteraction: false,
-          // @ts-expect-error: 'vibrate' is not in NotificationOptions type but works in browsers supporting it
-          vibrate: [200, 100, 200],
-        });
-      } catch (error) {
-        console.error('Message notification error:', error);
-      }
-    }
-  }, []);
-
-  const showClientMemoryNotification = useCallback(async () => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification('✨ Cậu ấy nhớ cậu', {
-          body: 'Cậu ấy vừa nhấn "Nhớ" cho cậu đấy 💕',
-          icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png',
-          tag: 'client-memory',
-          requireInteraction: false,
-          // @ts-expect-error: 'vibrate' is not in NotificationOptions type but works in browsers supporting it
-          vibrate: [200, 100, 200],
-        });
-      } catch (error) {
-        console.error('Memory notification error:', error);
-      }
-    }
-  }, []);
+  // Local notifications removed - only use push notifications from server
+  // This prevents duplicate notifications
 
   const setupRealtime = useCallback(() => {
     // Clean up previous channel if exists
@@ -163,8 +113,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
               createdAt: reaction.created_at,
             }, ...prev.reactions].slice(0, 20),
           }));
-          // Show notification
-          showClientReactionNotification(reaction.emoji);
+          // Push notification is handled by server - no local notification needed
         }
       )
       .on(
@@ -188,8 +137,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
               createdAt: message.created_at,
             }, ...prev.messages].slice(0, 20),
           }));
-          // Show notification
-          showClientMessageNotification(message.content);
+          // Push notification is handled by server - no local notification needed
         }
       )
       .on(
@@ -214,8 +162,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
                 createdAt: memory.created_at,
               }, ...prev.memories].slice(0, 20),
             }));
-            // Show notification
-            showClientMemoryNotification();
+            // Push notification is handled by server - no local notification needed
             // Trigger magical glow effect
             setGlowEffect(true);
             setTimeout(() => setGlowEffect(false), 4000); // 4 seconds magical glow
@@ -255,7 +202,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
         channelRef.current = null;
       }
     };
-  }, [supabase, showClientReactionNotification, showClientMessageNotification, showClientMemoryNotification]);
+  }, [supabase]);
 
   // Check notification status for admin
   useEffect(() => {
@@ -347,7 +294,9 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
   });
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4 relative transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className={`min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4 relative transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
       {/* Magical glow overlay effect */}
       {glowEffect && (
         <div className="fixed inset-0 pointer-events-none z-[9999] dreamy-glow">
@@ -460,6 +409,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
         {activeTab === 'send' && <SendMemory />}
       </div>
     </div>
+    </>
   );
 }
 
