@@ -512,8 +512,8 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
       return;
     }
     
-    // Only load if we don't have cached history and haven't loaded yet
-    if (!hasLoadedRef.current && history.length === 0 && !loading) {
+    // Only load if we haven't loaded yet and not currently loading
+    if (!hasLoadedRef.current && !loading) {
       loadHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

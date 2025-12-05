@@ -9,6 +9,7 @@ import { AIMessage } from './AIMessage';
 import { ResponseBox } from './ResponseBox';
 import { MemoryButton } from './MemoryButton';
 import { ResponseHistoryView } from './ResponseHistoryView';
+import { NotificationPopup } from '@/components/NotificationPopup';
 
 interface ClientMainScreenProps {
   userId: string;
@@ -24,6 +25,9 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   const [suggestionsCache, setSuggestionsCache] = useState<string[]>([]); // Cache suggestions when navigating to history
   const [glowEffect, setGlowEffect] = useState(false); // For glow effect when admin sends memory
   const [showMemoryTooltip, setShowMemoryTooltip] = useState(false); // Tooltip for memory count
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<'memory' | 'reaction' | 'message'>('memory');
   const prevMemoryCountRef = useRef(0); // Track previous count for glow effect
   const tooltipRef = useRef<HTMLDivElement>(null); // Ref for tooltip container
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
@@ -263,8 +267,10 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             setGlowEffect(true);
             setTimeout(() => setGlowEffect(false), 4000);
             
-            // Don't show local notification - push notification from server is enough
-            // showAdminMemoryNotificationRef.current?.();
+            // Show popup notification
+            setNotificationType('memory');
+            setNotificationMessage('✨ Tớ nhớ cậu');
+            setShowNotificationPopup(true);
           }
         }
       )
@@ -749,6 +755,14 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           </div>
         )}
       </div>
+
+      {/* Notification Popup */}
+      <NotificationPopup
+        show={showNotificationPopup}
+        message={notificationMessage}
+        type={notificationType}
+        onClose={() => setShowNotificationPopup(false)}
+      />
     </div>
   );
 }

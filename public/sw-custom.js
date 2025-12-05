@@ -1,61 +1,14 @@
-// Custom Service Worker with Workbox and Push Notification handlers
-// Import Workbox from CDN
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
+// Custom Service Worker for Push Notifications only
+// No Workbox, no precaching - just push notification handlers
+// This prevents all precaching-related 404 errors
+console.log('✅ Service Worker loaded (push notifications only)');
 
-// Workbox configuration
-if (workbox) {
-  console.log('✅ Workbox loaded');
-
-  // Precache assets (injected by next-pwa during build)
-  // next-pwa requires self.__WB_MANIFEST to be present in the source
-  // We reference it once here, and next-pwa will inject the manifest
-  // eslint-disable-next-line no-undef
-  const manifest = self.__WB_MANIFEST || [];
-  
-  // Only precache if manifest exists and has entries
-  if (Array.isArray(manifest) && manifest.length > 0) {
-    try {
-      // Filter out files that might not exist
-      const validManifest = manifest.filter((entry) => {
-        if (typeof entry === 'string') {
-          return !entry.includes('app-build-manifest.json') && 
-                 !entry.includes('build-manifest.json');
-        }
-        if (entry && entry.url) {
-          return !entry.url.includes('app-build-manifest.json') && 
-                 !entry.url.includes('build-manifest.json');
-        }
-        return true;
-      });
-      
-      if (validManifest.length > 0) {
-        workbox.precaching.precacheAndRoute(validManifest);
-        console.log('✅ Precache configured with', validManifest.length, 'entries');
-      }
-    } catch (error) {
-      console.warn('⚠️ Precache error (non-critical):', error);
-    }
-  }
-
-  // Cache strategies
-  workbox.routing.registerRoute(
-    ({ request }) => request.mode === 'navigate',
-    new workbox.strategies.NetworkFirst({
-      cacheName: 'start-url',
-    })
-  );
-
-  workbox.routing.registerRoute(
-    ({ url }) => url.protocol === 'http:' || url.protocol === 'https:',
-    new workbox.strategies.NetworkFirst({
-      cacheName: 'offlineCache',
-      plugins: [
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 200,
-        }),
-      ],
-    })
-  );
+// Reference self.__WB_MANIFEST to satisfy next-pwa requirement
+// But we don't use it - manifest will be empty due to publicExcludes and buildExcludes
+// eslint-disable-next-line no-undef
+const manifest = self.__WB_MANIFEST || [];
+if (manifest.length > 0) {
+  console.warn('⚠️ Manifest found but will not be used (precaching disabled)');
 }
 
 // ============================================
@@ -91,7 +44,6 @@ self.addEventListener('activate', (event) => {
 console.log('✅ Push notification handlers loaded');
 
 // Push event - handle push notifications
-// Following Next.js PWA best practices
 self.addEventListener('push', function (event) {
   console.log('📬 Push event received:', event);
   
@@ -164,18 +116,12 @@ self.addEventListener('push', function (event) {
 });
 
 // Notification click event
-// Following Next.js PWA best practices
 self.addEventListener('notificationclick', (event) => {
   console.log('👆 Notification clicked:', event.notification.tag);
   event.notification.close();
 
   const notificationData = event.notification.data || {};
-  let urlToOpen = notificationData.url || '/';
-  
-  // If it's a memory notification, navigate to Secret Garden
-  if (notificationData.type === 'memory') {
-    urlToOpen = '/garden';
-  }
+  const urlToOpen = notificationData.url || '/';
 
   event.waitUntil(
     self.clients.matchAll({

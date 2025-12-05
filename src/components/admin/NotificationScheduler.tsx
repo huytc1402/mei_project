@@ -26,7 +26,7 @@ export function NotificationScheduler() {
 
       if (error) {
         console.error('Error loading schedules:', error);
-        alert('Lỗi khi tải lịch: ' + error.message);
+        showToast('Lỗi khi tải lịch: ' + error.message, 'error');
         return;
       }
 

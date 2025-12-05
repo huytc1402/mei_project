@@ -16,7 +16,7 @@ export default function ClientPage() {
     if (loading) return;
 
     if (!user || user.role !== 'client') {
-      router.push('/welcome');
+      router.replace('/welcome');
       return;
     }
   }, [user, loading, router]);

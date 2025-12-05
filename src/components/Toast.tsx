@@ -42,12 +42,12 @@ export function Toast({ message, type = 'success', duration = 3000, onClose }: T
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.9 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] pointer-events-none"
+          className="w-full"
         >
-          <div className={`bg-gradient-to-r ${colors[type]} backdrop-blur-md rounded-xl px-4 py-3 border shadow-2xl min-w-[280px] max-w-[90vw]`}>
+          <div className={`bg-gradient-to-r ${colors[type]} backdrop-blur-md rounded-xl px-4 py-3 border shadow-2xl w-full`}>
             <div className="flex items-center space-x-3">
-              <span className="text-2xl">{icons[type]}</span>
-              <p className="text-white text-sm font-medium flex-1">{message}</p>
+              <span className="text-xl sm:text-2xl flex-shrink-0">{icons[type]}</span>
+              <p className="text-white text-xs sm:text-sm font-medium flex-1 break-words">{message}</p>
             </div>
           </div>
         </motion.div>
@@ -63,7 +63,7 @@ interface ToastContainerProps {
 
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] space-y-2 pointer-events-none">
+    <div className="fixed top-4 left-0 right-0 z-[100] space-y-2 pointer-events-none px-4 flex flex-col items-center">
       {toasts.map((toast, index) => (
         <motion.div
           key={toast.id}
@@ -71,7 +71,7 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.9 }}
           transition={{ duration: 0.3, ease: 'easeOut', delay: index * 0.1 }}
-          className="pointer-events-auto"
+          className="pointer-events-auto w-full max-w-md"
         >
           <Toast
             message={toast.message}

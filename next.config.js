@@ -5,10 +5,11 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   swSrc: 'public/sw-custom.js',
   sw: 'sw.js',
-  // Build exclusions - exclude files that might not exist
-  buildExcludes: [/app-build-manifest\.json$/, /build-manifest\.json$/],
-  // Note: runtimeCaching is not allowed when using swSrc
-  // Caching is handled in the custom service worker
+  // Disable precaching completely - we only need push notifications
+  publicExcludes: ['**/*'], // Exclude all files from precaching
+  buildExcludes: [/.*/], // Exclude everything from build manifest
+  // Note: workboxOptions is not supported when using swSrc
+  // We don't reference __WB_MANIFEST in sw-custom.js, so no precaching code will be injected
 });
 
 /** @type {import('next').NextConfig} */

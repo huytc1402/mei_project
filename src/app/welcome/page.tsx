@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -11,8 +11,15 @@ function WelcomePageContent() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace(user.role === 'admin' ? '/admin' : '/client');
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +37,7 @@ function WelcomePageContent() {
 
       if (result.success) {
         const role = result.actualRole || (result.userId ? 'client' : 'admin');
-        router.push(role === 'admin' ? '/admin' : '/client');
+        router.replace(role === 'admin' ? '/admin' : '/client');
       } else {
         setError(result.error || 'Token không hợp lệ');
         setLoading(false);
@@ -40,6 +47,15 @@ function WelcomePageContent() {
       setLoading(false);
     }
   };
+
+  // Don't render if already logged in (will redirect)
+  if (authLoading || user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light" style={{ backgroundColor: '#0a0e1a' }}>
+        <div className="text-5xl animate-spin">⏳</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light p-4" style={{ backgroundColor: '#0a0e1a' }}>

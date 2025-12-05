@@ -11,6 +11,7 @@ import { SendMemory } from './SendMemory';
 import { NotificationToggle } from '@/components/client/NotificationToggle';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/Toast';
+import { NotificationPopup } from '@/components/NotificationPopup';
 
 interface AdminDashboardProps {
   userId: string;
@@ -29,59 +30,78 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
   });
   const [glowEffect, setGlowEffect] = useState(false); // For glow effect when client sends memory
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [showNotificationPopup, setShowNotificationPopup] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<'memory' | 'reaction' | 'message'>('memory');
   const supabase = useMemo(() => createClient(), []); // Memoize Supabase client
   const channelRef = useRef<any>(null);
   const { toasts, showToast, removeToast } = useToast();
 
   const loadInitialData = useCallback(async () => {
-    // Parallelize queries and select only needed fields
-    // Increased limit to load more data so it persists after reload
-    const [reactionsResult, messagesResult, memoriesResult] = await Promise.all([
-      supabase
-        .from('reactions')
-        .select('id, user_id, emoji, created_at') // Select only needed fields
-        .order('created_at', { ascending: false })
-        .limit(50), // Increased from 10 to 50
-      supabase
-        .from('messages')
-        .select('id, user_id, content, type, emoji, created_at') // Select only needed fields
-        .order('created_at', { ascending: false })
-        .limit(50), // Increased from 10 to 50
-      supabase
-        .from('memories')
-        .select('id, user_id, sender_role, created_at') // Select only needed fields including sender_role
-        .order('created_at', { ascending: false })
-        .limit(50), // Increased from 10 to 50
-    ]);
+    try {
+      // Parallelize queries and select only needed fields
+      // Increased limit to load more data so it persists after reload
+      const [reactionsResult, messagesResult, memoriesResult] = await Promise.all([
+        supabase
+          .from('reactions')
+          .select('id, user_id, emoji, created_at') // Select only needed fields
+          .order('created_at', { ascending: false })
+          .limit(50), // Increased from 10 to 50
+        supabase
+          .from('messages')
+          .select('id, user_id, content, type, emoji, created_at') // Select only needed fields
+          .order('created_at', { ascending: false })
+          .limit(50), // Increased from 10 to 50
+        supabase
+          .from('memories')
+          .select('id, user_id, sender_role, created_at') // Select only needed fields including sender_role
+          .order('created_at', { ascending: false })
+          .limit(50), // Increased from 10 to 50
+      ]);
 
-    const reactions = reactionsResult.data || [];
-    const messages = messagesResult.data || [];
-    const memories = memoriesResult.data || [];
+      // Check for errors
+      if (reactionsResult.error) {
+        console.error('Error loading reactions:', reactionsResult.error);
+      }
+      if (messagesResult.error) {
+        console.error('Error loading messages:', messagesResult.error);
+      }
+      if (memoriesResult.error) {
+        console.error('Error loading memories:', memoriesResult.error);
+      }
 
-    // Map snake_case to camelCase
-    setRealtimeData({
-      reactions: reactions.map((r: any) => ({
-        id: r.id,
-        userId: r.user_id,
-        emoji: r.emoji,
-        createdAt: r.created_at,
-      })),
-      messages: messages.map((m: any) => ({
-        id: m.id,
-        userId: m.user_id,
-        content: m.content,
-        type: m.type,
-        emoji: m.emoji,
-        createdAt: m.created_at,
-      })),
-      memories: memories.map((m: any) => ({
-        id: m.id,
-        userId: m.user_id,
-        senderRole: m.sender_role || 'client', // Default to client if not set
-        createdAt: m.created_at,
-      })),
-    });
-  }, [supabase]);
+      const reactions = reactionsResult.data || [];
+      const messages = messagesResult.data || [];
+      const memories = memoriesResult.data || [];
+
+      // Map snake_case to camelCase
+      setRealtimeData({
+        reactions: reactions.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          emoji: r.emoji,
+          createdAt: r.created_at,
+        })),
+        messages: messages.map((m: any) => ({
+          id: m.id,
+          userId: m.user_id,
+          content: m.content,
+          type: m.type,
+          emoji: m.emoji,
+          createdAt: m.created_at,
+        })),
+        memories: memories.map((m: any) => ({
+          id: m.id,
+          userId: m.user_id,
+          senderRole: m.sender_role || 'client', // Default to client if not set
+          createdAt: m.created_at,
+        })),
+      });
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      showToast('Lỗi khi tải dữ liệu. Vui lòng thử lại.', 'error');
+    }
+  }, [supabase, showToast]);
 
   // Local notifications removed - only use push notifications from server
   // This prevents duplicate notifications
@@ -113,7 +133,10 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
               createdAt: reaction.created_at,
             }, ...prev.reactions].slice(0, 20),
           }));
-          // Push notification is handled by server - no local notification needed
+          // Show popup notification
+          setNotificationType('reaction');
+          setNotificationMessage(`❤️ Cậu ấy đã gửi ${reaction.emoji}`);
+          setShowNotificationPopup(true);
         }
       )
       .on(
@@ -162,7 +185,10 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
                 createdAt: memory.created_at,
               }, ...prev.memories].slice(0, 20),
             }));
-            // Push notification is handled by server - no local notification needed
+            // Show popup notification
+            setNotificationType('memory');
+            setNotificationMessage('✨ Cậu ấy đã nhấn Nhớ!');
+            setShowNotificationPopup(true);
             // Trigger magical glow effect
             setGlowEffect(true);
             setTimeout(() => setGlowEffect(false), 4000); // 4 seconds magical glow
@@ -408,6 +434,14 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
         {activeTab === 'alerts' && <RealtimeAlerts data={realtimeData} />}
         {activeTab === 'send' && <SendMemory />}
       </div>
+
+      {/* Notification Popup */}
+      <NotificationPopup
+        show={showNotificationPopup}
+        message={notificationMessage}
+        type={notificationType}
+        onClose={() => setShowNotificationPopup(false)}
+      />
     </div>
     </>
   );

@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       icon: '/icon-192x192.png',
       tag: `memory-${Date.now()}`, // Format: "memory-timestamp" for rate limiting
       data: {
-        url: '/garden',
+        url: '/client',
         type: 'memory',
       },
       requireInteraction: false,

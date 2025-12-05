@@ -1,18 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/Toast';
 
 export function SendMemory() {
-  const router = useRouter();
   const [isSending, setIsSending] = useState(false);
-  const [lastSent, setLastSent] = useState<Date | null>(null);
-  const [cooldown, setCooldown] = useState(0);
   const [clientMemoryCount, setClientMemoryCount] = useState(0);
-  const COOLDOWN_SECONDS = 3;
   const supabase = createClient();
   const channelRef = useRef<any>(null);
   const { toasts, showToast, removeToast } = useToast();
@@ -49,21 +44,6 @@ export function SendMemory() {
     };
   }, [supabase]);
 
-  useEffect(() => {
-    if (isSending && cooldown > 0) {
-      const timer = setInterval(() => {
-        setCooldown((prev) => {
-          if (prev <= 1) {
-            setIsSending(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [isSending, cooldown]);
-
   async function loadClientMemoryCount() {
     try {
       const { data: clientUsers } = await supabase
@@ -96,7 +76,6 @@ export function SendMemory() {
     if (isSending) return;
 
     setIsSending(true);
-    setCooldown(COOLDOWN_SECONDS);
 
     try {
       const response = await fetch('/api/admin/send-memory', {
@@ -109,28 +88,16 @@ export function SendMemory() {
       const result = await response.json();
 
       if (result.success) {
-        setLastSent(new Date());
         // Reload client memory count after sending
         await loadClientMemoryCount();
-        // Navigate to Secret Garden
-        setTimeout(() => {
-          router.push('/garden');
-        }, 1000);
-        // Re-enable after cooldown
-        setTimeout(() => {
-          setIsSending(false);
-          setCooldown(0);
-        }, COOLDOWN_SECONDS * 1000);
       } else {
-        setIsSending(false);
-        setCooldown(0);
         showToast('Gửi thất bại: ' + (result.error || 'Unknown error'), 'error');
       }
     } catch (error) {
       console.error('Send memory error:', error);
-      setIsSending(false);
-      setCooldown(0);
       showToast('Có lỗi xảy ra khi gửi', 'error');
+    } finally {
+      setIsSending(false);
     }
   }
 
@@ -163,11 +130,7 @@ export function SendMemory() {
           {isSending ? (
             <div className="flex items-center gap-2">
               <span className="text-2xl animate-spin">✨</span>
-              {cooldown > 0 ? (
-                <span className="text-sm sm:text-base opacity-90">Đợi {cooldown}s...</span>
-              ) : (
-                <span className="text-sm sm:text-base opacity-90">Đang gửi...</span>
-              )}
+              <span className="text-sm sm:text-base opacity-90">Đang gửi...</span>
             </div>
           ) : (
             // Normal label
@@ -177,16 +140,6 @@ export function SendMemory() {
             </div>
           )}
         </button>
-
-        {/* Last Sent Notification */}
-        {lastSent && (
-          <div className="mt-4 text-center animate-fade-in">
-            <p className="text-green-400/80 text-sm flex items-center justify-center gap-2">
-              <span>✓</span>
-              <span>Đã gửi lúc {lastSent.toLocaleTimeString('vi-VN')}</span>
-            </p>
-          </div>
-        )}
       </div>
 
     </div>

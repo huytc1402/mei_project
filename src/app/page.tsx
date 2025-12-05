@@ -15,12 +15,12 @@ export default function HomePage() {
     if (loading) return;
 
     if (!user) {
-      router.push('/welcome');
+      router.replace('/welcome');
       return;
     }
 
     const redirectPath = user.role === 'admin' ? '/admin' : '/client';
-    router.push(redirectPath);
+    router.replace(redirectPath);
   }, [user, loading, router]);
 
   if (loading) {
