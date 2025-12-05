@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       title: '✨ Cậu ấy đã nhớ đến bạn!',
       body: 'Cậu ấy vừa nhấn nút Nhớ. Hãy mở app để xem!',
       icon: '/icon-192x192.png',
-      tag: 'memory-from-admin',
+      tag: `memory-${Date.now()}`, // Format: "memory-timestamp" for rate limiting
       data: {
         url: '/client',
         type: 'memory',

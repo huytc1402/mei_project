@@ -48,13 +48,14 @@ export async function POST(request: NextRequest) {
               title: `${emoji || '😊'} Cậu ấy đã gửi emoji`,
               body: `${emoji || '😊'} - Cậu ấy vừa gửi emoji phản hồi.`,
               icon: '/icon-192x192.png',
-              tag: `reaction-${Date.now()}`,
+              tag: `reaction-${Date.now()}`, // Format: "reaction-timestamp" for rate limiting
               data: {
                 url: '/admin',
                 type: 'reaction',
                 emoji: emoji || '😊',
               },
               requireInteraction: false,
+              vibrate: [100, 50, 100],
             }).catch(err => console.error('Push notification error:', err));
           } else if (type === 'message') {
             const messagePreview = content 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
               title: '💬 Có tin nhắn mới',
               body: messagePreview,
               icon: '/icon-192x192.png',
-              tag: `message-${Date.now()}`,
+              tag: `message-${Date.now()}`, // Format: "message-timestamp" for rate limiting
               data: {
                 url: '/admin',
                 type: 'message',

@@ -13,8 +13,9 @@ export class PushSubscriptionService {
 
   constructor() {
     // Get public VAPID key from environment
+    // Following Next.js convention: NEXT_PUBLIC_VAPID_PUBLIC_KEY
     if (typeof window !== 'undefined') {
-      this.publicVapidKey = process.env.NEXT_PUBLIC_VAPID_KEY || null;
+      this.publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_KEY || null;
     }
   }
 
@@ -63,6 +64,7 @@ export class PushSubscriptionService {
 
   /**
    * Register service worker
+   * Following Next.js PWA best practices
    */
   async registerServiceWorker(): Promise<ServiceWorkerRegistration> {
     if (!('serviceWorker' in navigator)) {
@@ -70,10 +72,14 @@ export class PushSubscriptionService {
     }
 
     try {
+      // Register with updateViaCache: 'none' to ensure we always get the latest version
+      // This is recommended by Next.js for PWAs
       const registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
+        updateViaCache: 'none',
       });
 
+      // Wait for service worker to be ready
       await navigator.serviceWorker.ready;
       return registration;
     } catch (error) {
@@ -101,7 +107,7 @@ export class PushSubscriptionService {
       if (!isSupported) {
         console.error('❌ [PushSubscription] Not supported');
         if (!this.publicVapidKey) {
-          throw new Error('VAPID public key not configured. Please check NEXT_PUBLIC_VAPID_KEY environment variable.');
+          throw new Error('VAPID public key not configured. Please check NEXT_PUBLIC_VAPID_PUBLIC_KEY environment variable.');
         }
         throw new Error('Push notifications are not supported in this browser.');
       }

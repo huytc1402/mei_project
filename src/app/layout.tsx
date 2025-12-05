@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Mei Project',
-  manifest: '/manifest.json',
+  // manifest is automatically generated from app/manifest.ts in Next.js 14+
   themeColor: '#1a1a2e',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
   appleWebApp: {

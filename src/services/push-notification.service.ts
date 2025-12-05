@@ -30,12 +30,15 @@ export class PushNotificationService {
 
   constructor() {
     // Initialize VAPID details
-    const publicKey = process.env.PUBLIC_VAPID_KEY;
+    // Following Next.js convention: NEXT_PUBLIC_VAPID_PUBLIC_KEY for public key
+    // Note: Server-side can access NEXT_PUBLIC_* variables, but we use VAPID_PRIVATE_KEY for private
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.PUBLIC_VAPID_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
     const email = process.env.VAPID_EMAIL || 'mailto:admin@example.com';
 
     if (!publicKey || !privateKey) {
       console.warn('⚠️ VAPID keys not configured. Push notifications will not work.');
+      console.warn('   Please set NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables.');
       return;
     }
 
@@ -195,8 +198,9 @@ export class PushNotificationService {
 
       await Promise.allSettled(promises);
 
-      // Log notification sent
+      // Log notification sent with base type for rate limiting
       if (sent > 0) {
+        const baseType = (payload.tag || 'default').split('-')[0];
         await this.logNotification(userId, payload.tag || 'default');
       }
 
@@ -229,11 +233,14 @@ export class PushNotificationService {
       const prefs = data as any;
       const tag = payload.tag || 'default';
 
+      // Extract base type from tag for preference checking
+      const baseType = tag.split('-')[0];
+
       // Check if notification type is enabled
-      if (tag.includes('memory') && !prefs.enable_memory) return false;
-      if (tag.includes('message') && !prefs.enable_message) return false;
-      if (tag.includes('reaction') && !prefs.enable_reaction) return false;
-      if (tag.includes('daily') && !prefs.enable_daily) return false;
+      if (baseType === 'memory' && !prefs.enable_memory) return false;
+      if (baseType === 'message' && !prefs.enable_message) return false;
+      if (baseType === 'reaction' && !prefs.enable_reaction) return false;
+      if (baseType === 'daily' && !prefs.enable_daily) return false;
 
       // Check silent hours
       if (prefs.silent_hours_start !== null && prefs.silent_hours_end !== null) {
@@ -264,6 +271,7 @@ export class PushNotificationService {
 
   /**
    * Check rate limiting
+   * Improved to prevent spam while allowing normal interactions
    */
   private async checkRateLimit(
     userId: string,
@@ -271,21 +279,24 @@ export class PushNotificationService {
   ): Promise<boolean> {
     try {
       // Determine rate limit based on notification type
+      // Reduced limits to allow more frequent interactions while still preventing spam
       const rateLimits: Record<string, number> = {
-        memory: 5 * 60 * 1000, // 5 minutes
-        message: 2 * 60 * 1000, // 2 minutes
-        reaction: 1 * 60 * 1000, // 1 minute
+        memory: 30 * 1000, // 30 seconds - prevent spam clicking
+        message: 10 * 1000, // 10 seconds - allow quick replies but prevent spam
+        reaction: 5 * 1000, // 5 seconds - allow emoji reactions but prevent spam
         daily: 24 * 60 * 60 * 1000, // 24 hours
       };
 
-      const limitMs = rateLimits[notificationType] || 1 * 60 * 1000; // Default: 1 minute
+      // Extract base type from tag (e.g., "memory-from-admin" -> "memory")
+      const baseType = notificationType.split('-')[0];
+      const limitMs = rateLimits[baseType] || 10 * 1000; // Default: 10 seconds
 
       // Check last notification of this type
       const { data } = await this.supabase
         .from('notification_logs')
         .select('sent_at')
         .eq('user_id', userId)
-        .eq('notification_type', notificationType)
+        .like('notification_type', `${baseType}%`) // Match any variant (memory-from-admin, memory-from-client, etc.)
         .order('sent_at', { ascending: false })
         .limit(1)
         .single();

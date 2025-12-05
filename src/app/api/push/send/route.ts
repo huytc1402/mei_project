@@ -97,6 +97,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update tag with notification type for rate limiting
+    // Format: "type-timestamp" (e.g., "memory-1234567890")
+    // Rate limiting will extract base type (memory, message, reaction)
     payload.tag = `${notificationType}-${Date.now()}`;
 
     const result = await pushService.sendNotification(userId, payload);
