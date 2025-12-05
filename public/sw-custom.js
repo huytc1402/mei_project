@@ -6,37 +6,9 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 if (workbox) {
   console.log('✅ Workbox loaded');
 
-  // Precache assets (injected by next-pwa during build)
-  // self.__WB_MANIFEST is automatically injected by next-pwa
-  // Handle precaching safely - only if manifest exists and is valid
-  if (self.__WB_MANIFEST && Array.isArray(self.__WB_MANIFEST) && self.__WB_MANIFEST.length > 0) {
-    try {
-      // Filter out files that might not exist (e.g., in development)
-      const validManifest = self.__WB_MANIFEST.filter((entry) => {
-        // Skip build manifest files that might not exist in dev mode
-        if (typeof entry === 'string') {
-          return !entry.includes('app-build-manifest.json') && 
-                 !entry.includes('build-manifest.json');
-        }
-        if (entry && entry.url) {
-          return !entry.url.includes('app-build-manifest.json') && 
-                 !entry.url.includes('build-manifest.json');
-        }
-        return true;
-      });
-      
-      if (validManifest.length > 0) {
-        workbox.precaching.precacheAndRoute(validManifest);
-        console.log('✅ Precache configured with', validManifest.length, 'entries');
-      } else {
-        console.log('ℹ️ No valid precache entries after filtering');
-      }
-    } catch (error) {
-      console.warn('⚠️ Precache error (non-critical):', error);
-    }
-  } else {
-    console.log('ℹ️ No precache manifest available (development mode or no assets to cache)');
-  }
+  // Skip precaching to avoid "Multiple instances" error with next-pwa
+  // We'll use runtime caching instead for better control
+  // This prevents conflicts when next-pwa injects self.__WB_MANIFEST
 
   // Cache strategies
   workbox.routing.registerRoute(

@@ -7,6 +7,9 @@ const withPWA = require('next-pwa')({
   sw: 'sw.js',
   // Build exclusions - exclude files that might not exist
   buildExcludes: [/app-build-manifest\.json$/, /build-manifest\.json$/],
+  // Disable precaching to avoid "Multiple instances" error
+  // We use runtime caching instead
+  publicExcludes: ['**/*'],
   // Note: runtimeCaching is not allowed when using swSrc
   // Caching is handled in the custom service worker
 });
