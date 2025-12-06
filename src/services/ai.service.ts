@@ -186,7 +186,7 @@ VÍ DỤ SAI (TUYỆT ĐỐI TRÁNH):
     
     // Content types pool - select 4-5 randomly
     const contentTypes = [
-      'Dự báo Thời tiết & Lời nhắc Hữu ích (BẮT BUỘC)',
+      'Dự Báo Thời Tiết & Lời Nhắc Hữu Ích (BẮT BUỘC)',
       'Vũ Trụ Boss & Sen',
       'Góc Thú Cưng Dễ Thương',
       'Câu Quote Động lực',
@@ -196,21 +196,15 @@ VÍ DỤ SAI (TUYỆT ĐỐI TRÁNH):
       'Thử thách Mini trong ngày',
       'Đề xuất Giải trí',
       'Gợi ý Ăn uống Nhanh',
-      'Văn hóa Pop Tóm tắt',
       'Lịch sử Hôm nay (Fun)',
-      'Từ Vựng Độc Lạ/Ngôn Ngữ Gen Z',
-      'Fun Fact Động Vật',
       'Phá Vỡ Định Kiến Vớ Vẩn',
       'Mục Tiêu Nhỏ Cho Ngày Mai',
       "Cung Cấp Một 'Reason to Smile'",
       'Kiến Thức Tài Chính (Fun)',
       'Tài Liệu Hữu Ích Cần Lưu Lại',
       'Câu Đố Nhanh/Tricky Question',
-      'Tip Chăm Sóc Thú Cưng',
-      'Bí Kíp Nuôi Boss Khỏe',
       'Từ vựng mỗi ngày',
-      'Xu hướng Công Nghệ và Thiết Kế',
-      'Điện ảnh & Truyện TTranh, Anime & Manga (Fun)',
+      'Điện ảnh & Truyện Tranh, Anime & Manga (Fun)',
     ];
 
     // Randomly select 4-5 content types (always include weather)

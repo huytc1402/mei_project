@@ -132,7 +132,8 @@ HistoryItemComponent.displayName = 'HistoryItemComponent';
 
 export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLoaded }: ResponseHistoryViewProps) {
   const [history, setHistory] = useState<HistoryItem[]>(cachedHistory || []);
-  const [loading, setLoading] = useState(!cachedHistory);
+  // Loading should be false if cachedHistory is provided (even if empty array)
+  const [loading, setLoading] = useState(cachedHistory === null || cachedHistory === undefined);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'reaction' | 'message' | 'memory'>('all');
@@ -504,17 +505,22 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
 
   // Load history only once when component mounts and no cached history
   useEffect(() => {
-    // If we have cached history, use it and mark as loaded
-    if (cachedHistory && cachedHistory.length > 0) {
+    // If we have cached history (even if empty array), use it and mark as loaded
+    if (cachedHistory !== null && cachedHistory !== undefined) {
       setHistory(cachedHistory);
       hasLoadedRef.current = true;
       setLoading(false);
       return;
     }
     
-    // Only load if we haven't loaded yet and not currently loading
-    if (!hasLoadedRef.current && !loading) {
+    // Only load if we haven't loaded yet and have userId
+    // Note: We should load even if loading is true initially (when no cachedHistory)
+    if (!hasLoadedRef.current && userId) {
       loadHistory();
+    } else if (!userId) {
+      // If no userId, stop loading and show empty state
+      setLoading(false);
+      hasLoadedRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
