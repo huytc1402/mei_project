@@ -101,11 +101,26 @@ export class NotificationService {
 
     if (!clientUsers) return;
 
+    // Get current time in Vietnam timezone (UTC+7)
+    // Schedules are stored as Vietnam time (HH:mm format), so we need to compare in Vietnam timezone
     const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentSecond = now.getSeconds();
+    
+    // Convert to Vietnam time using Intl API for accurate timezone conversion
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    
+    const parts = formatter.formatToParts(now);
+    const currentHour = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+    const currentMinute = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+    const currentSecond = parseInt(parts.find(p => p.type === 'second')?.value || '0', 10);
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    console.log(`[NotificationService] Current Vietnam time: ${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')} (UTC+7)`);
 
     // Check each schedule
     for (const schedule of schedules) {
@@ -113,7 +128,9 @@ export class NotificationService {
       const [hours, minutes] = scheduleData.time.split(':').map(Number);
       const scheduleTimeInMinutes = hours * 60 + minutes;
       
-      // Calculate time difference
+      console.log(`[NotificationService] Checking schedule: ${scheduleData.time} (Vietnam time), Current: ${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`);
+      
+      // Calculate time difference (both in Vietnam timezone)
       const timeDiff = currentTimeInMinutes - scheduleTimeInMinutes;
       
       // Send if schedule time matches (within 5 minutes window)

@@ -126,6 +126,9 @@ export function NotificationScheduler() {
             <p className="text-xs text-romantic-glow/60 mt-2">
               ⏰ Cron chạy mỗi 5 phút để kiểm tra và gửi thông báo đúng giờ
             </p>
+            <p className="text-xs text-romantic-glow/80 mt-2 font-medium">
+              📍 Thời gian: Nhập theo <strong>giờ Việt Nam (UTC+7)</strong> - Hệ thống sẽ tự động xử lý timezone
+            </p>
           </div>
         </div>
       </div>
