@@ -76,13 +76,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send Telegram notification
-    const { TelegramService } = await import('@/services/telegram.service');
-    const telegramService = new TelegramService();
-    await telegramService.sendAlert(
-      `✨ Đã gửi năng lượng cho cậu ấy!\n⏰ ${new Date().toLocaleString('vi-VN')}`
-    );
-
     // Send SILENT push notification to client (no vibrate, no popup - just badge/icon change)
     const { PushNotificationService } = await import('@/services/push-notification.service');
     const pushService = new PushNotificationService();

@@ -105,33 +105,17 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
 
   const handleReaction = useCallback(async (emoji: string) => {
     try {
-      // Parallelize database insert and telegram alert (fire and forget for telegram)
-      const [reactionResult] = await Promise.allSettled([
-        supabase
-          .from('reactions')
-          .insert({
-            user_id: userId,
-            emoji,
-          })
-          .select('id') // Select only id
-          .single(),
-        // Telegram alert + Push notification - fire and forget (don't wait for it)
-        fetch('/api/telegram/alert', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            type: 'reaction',
-            emoji,
-            timestamp: new Date().toLocaleString('vi-VN'),
-            userId, // Pass userId for push notification
-          }),
-        }).catch(err => console.error('Telegram alert error:', err)), // Silent fail
-      ]);
+      const { data, error } = await supabase
+        .from('reactions')
+        .insert({
+          user_id: userId,
+          emoji,
+        })
+        .select('id')
+        .single();
 
-      if (reactionResult.status === 'fulfilled' && reactionResult.value.data) {
-        // Success
+      if (error) {
+        console.error('Reaction error:', error);
       }
     } catch (error) {
       console.error('Reaction error:', error);
@@ -140,34 +124,18 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
 
   const handleQuickReply = useCallback(async (content: string) => {
     try {
-      // Parallelize database insert and telegram alert (fire and forget for telegram)
-      const [messageResult] = await Promise.allSettled([
-        supabase
-          .from('messages')
-          .insert({
-            user_id: userId,
-            content,
-            type: 'quick_reply',
-          })
-          .select('id') // Select only id
-          .single(),
-        // Telegram alert + Push notification - fire and forget
-        fetch('/api/telegram/alert', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            type: 'message',
-            content,
-            timestamp: new Date().toLocaleString('vi-VN'),
-            userId, // Pass userId for push notification
-          }),
-        }).catch(err => console.error('Telegram alert error:', err)), // Silent fail
-      ]);
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          user_id: userId,
+          content,
+          type: 'quick_reply',
+        })
+        .select('id')
+        .single();
 
-      if (messageResult.status === 'fulfilled' && messageResult.value.data) {
-        // Success
+      if (error) {
+        console.error('Quick reply error:', error);
       }
     } catch (error) {
       console.error('Quick reply error:', error);
@@ -187,7 +155,6 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
           .select('id') // Select only id
           .single(),
         // Send notification to admin - fire and forget
-        // Only use /api/client/send-memory to avoid duplicate telegram notifications
         fetch('/api/client/send-memory', {
           method: 'POST',
           headers: {

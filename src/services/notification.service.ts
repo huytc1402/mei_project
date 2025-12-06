@@ -1,12 +1,10 @@
 import { AIService } from './ai.service';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { TelegramService } from './telegram.service';
 import { PushNotificationService } from './push-notification.service';
 
 export class NotificationService {
   private supabase = createAdminClient();
   private aiService = new AIService();
-  private telegramService = new TelegramService();
   private pushService = new PushNotificationService();
 
   async sendDailyNotification(userId: string): Promise<void> {

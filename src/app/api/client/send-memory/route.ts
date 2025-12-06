@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { TelegramService } from '@/services/telegram.service';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,12 +30,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    // Send Telegram notification to admin
-    const telegramService = new TelegramService();
-    await telegramService.sendAlert(
-      `✨ Cậu ấy đã gửi năng lượng!\n ⏰ ${new Date().toLocaleString('vi-VN')}`
-    );
 
     // Send push notification to admin
     const adminUserId = (adminUsers[0] as any).id;
