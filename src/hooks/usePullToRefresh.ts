@@ -35,7 +35,33 @@ export function usePullToRefresh({
   useEffect(() => {
     if (!enabled) return;
 
+    // Helper function to check if touch is inside a scrollable element that's actively scrollable
+    const isInsideScrollableArea = (target: EventTarget | null): boolean => {
+      if (!target || !(target instanceof Element)) return false;
+      
+      let current: Element | null = target;
+      while (current && current !== document.body) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        
+        // Check if element has scrollable content
+        if ((overflowY === 'auto' || overflowY === 'scroll') && current.scrollHeight > current.clientHeight) {
+          // Block pull-to-refresh if element is scrollable
+          // This prevents conflict with scrolling in message box
+          return true;
+        }
+        
+        current = current.parentElement;
+      }
+      return false;
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
+      // Don't trigger if touch is inside a scrollable element
+      if (isInsideScrollableArea(e.target)) {
+        return;
+      }
+
       // Only trigger if at the top of the page and not already refreshing
       if (window.scrollY <= 5 && !isRefreshing && !isDragging.current) {
         startY.current = e.touches[0].clientY;
@@ -44,6 +70,15 @@ export function usePullToRefresh({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      // Check if touch moved into a scrollable element
+      if (isInsideScrollableArea(e.target)) {
+        if (isDragging.current) {
+          isDragging.current = false;
+          setPullProgress(0);
+        }
+        return;
+      }
+
       if (!isDragging.current || isRefreshing || window.scrollY > 5) {
         if (isDragging.current) {
           isDragging.current = false;
@@ -78,6 +113,11 @@ export function usePullToRefresh({
 
     // Support mouse for desktop testing
     const handleMouseDown = (e: MouseEvent) => {
+      // Check if click is inside a scrollable element
+      if (isInsideScrollableArea(e.target)) {
+        return;
+      }
+
       if (window.scrollY <= 5 && !isRefreshing && !isDragging.current) {
         startY.current = e.clientY;
         isDragging.current = true;
@@ -85,6 +125,15 @@ export function usePullToRefresh({
     };
 
     const handleMouseMove = (e: MouseEvent) => {
+      // Check if mouse moved into a scrollable element
+      if (isInsideScrollableArea(e.target)) {
+        if (isDragging.current) {
+          isDragging.current = false;
+          setPullProgress(0);
+        }
+        return;
+      }
+
       if (!isDragging.current || isRefreshing || window.scrollY > 5) {
         if (isDragging.current) {
           isDragging.current = false;

@@ -64,6 +64,13 @@ export async function POST(request: NextRequest) {
     yesterdayEnd.setHours(23, 59, 59, 999);
     const yesterdayEndISO = yesterdayEnd.toISOString();
 
+    // Get user preferences (city, horoscope) for AI personalization
+    const { data: userPreferences } = await supabase
+      .from('user_preferences')
+      .select('city, horoscope')
+      .eq('user_id', userId)
+      .maybeSingle();
+
     // Get all recent activity (last 7 days for context, but focus on yesterday)
     // Parallelize queries and select only needed fields
     const [reactionsResult, messagesResult, memoriesResult] = await Promise.all([
@@ -91,11 +98,17 @@ export async function POST(request: NextRequest) {
     const allMessages = messagesResult.data || [];
     const allMemories = memoriesResult.data || [];
 
+    // Extract user preferences
+    const userCity = (userPreferences as any)?.city || undefined;
+    const userHoroscope = (userPreferences as any)?.horoscope || undefined;
+
     // Filter to get yesterday's activity (AI service will handle this, but we pass all for context)
     const { content, emotionLevel } = await aiService.generateDailyMessage(
       allReactions,
       allMessages,
-      allMemories
+      allMemories,
+      userCity,
+      userHoroscope
     );
 
     // Save notification for today

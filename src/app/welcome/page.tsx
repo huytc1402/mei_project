@@ -95,6 +95,30 @@ function WelcomePageContent() {
             {loading ? 'Đang xử lý...' : 'Tiếp tục'}
           </button>
         </form>
+
+        {/* Privacy Transparency Information */}
+        <div className="mt-8 p-4 bg-romantic-soft/30 rounded-lg border border-romantic-light/20">
+          <div className="flex items-start gap-3">
+            <span className="text-xl">🔒</span>
+            <div className="flex-1 space-y-2">
+              <p className="text-white text-sm font-medium">Quyền riêng tư & Bảo mật</p>
+              <div className="space-y-1 text-xs text-romantic-glow/70">
+                <p className="flex items-center gap-2">
+                  <span>✓</span>
+                  <span>Ứng dụng KHÔNG theo dõi vị trí (Location) của bạn</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span>✓</span>
+                  <span>Dữ liệu được mã hóa và bảo mật</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <span>✓</span>
+                  <span>Bạn có thể đăng nhập lại dễ dàng khi đổi thiết bị</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -138,34 +138,18 @@ export const NotificationToggle = memo(function NotificationToggle({ enabled, on
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="flex items-center justify-between bg-gradient-to-r from-romantic-soft/50 to-romantic-light/30 rounded-xl p-4 border border-romantic-glow/20 backdrop-blur-sm shadow-lg">
-        <div className="flex items-center space-x-3 mr-4">
-          <span className="text-2xl">
-            🔔
-          </span>
-          <div>
-            <p className="text-white text-sm font-medium">Thông báo</p>
-            <p className="text-romantic-glow/60 text-xs">
-              {isLoading ? 'Đang xử lý...' : (enabled ? 'Đang bật' : 'Đang tắt')}
-            </p>
-          </div>
-        </div>
-
+      <div className="relative flex items-center gap-2">
+        {/* Icon Button */}
         <button
           onClick={handleToggle}
           disabled={isLoading}
-          className={`relative w-14 h-7 rounded-full transition-all ${isLoading ? 'opacity-70 cursor-wait' : 'cursor-pointer'} ${enabled ? 'bg-gradient-to-r from-romantic-glow to-romantic-accent' : 'bg-romantic-light/50'
-            }`}
+          className="w-9 h-9 bg-romantic-soft/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={enabled ? 'Thông báo: Đang bật' : 'Thông báo: Đang tắt'}
         >
           {isLoading ? (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-              <div className="w-3 h-3 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <div className="w-4 h-4 border-2 border-romantic-glow/60 border-t-transparent rounded-full animate-spin" />
           ) : (
-            <span
-              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 ${enabled ? 'left-[calc(100%-1.5rem)]' : 'left-0.5'
-                }`}
-            />
+            <span className="text-lg">{enabled ? '🔔' : '🔕'}</span>
           )}
         </button>
       </div>

@@ -8,12 +8,15 @@ import { ToastContainer } from '@/components/Toast';
 export function SendMemory() {
   const [isSending, setIsSending] = useState(false);
   const [clientMemoryCount, setClientMemoryCount] = useState(0);
+  const [adminMemoryCountToday, setAdminMemoryCountToday] = useState(0);
+  const [canSendToday, setCanSendToday] = useState(true);
   const supabase = createClient();
   const channelRef = useRef<any>(null);
   const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
     loadClientMemoryCount();
+    loadAdminMemoryCountToday();
 
     // Setup realtime subscription for memories
     const channel = supabase
@@ -30,6 +33,8 @@ export function SendMemory() {
           // Only update if it's from client
           if (memory.sender_role === 'client') {
             loadClientMemoryCount();
+          } else if (memory.sender_role === 'admin') {
+            loadAdminMemoryCountToday();
           }
         }
       )
@@ -72,6 +77,48 @@ export function SendMemory() {
     }
   }
 
+  async function loadAdminMemoryCountToday() {
+    try {
+      const { data: clientUsers } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'client')
+        .limit(1);
+
+      if (clientUsers && clientUsers.length > 0) {
+        const clientId = (clientUsers[0] as any).id;
+        
+        // Get today's date range
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStart = tomorrow.toISOString();
+
+        const { count, error } = await supabase
+          .from('memories')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', clientId)
+          .eq('sender_role', 'admin')
+          .gte('created_at', todayStart)
+          .lt('created_at', tomorrowStart);
+
+        if (error) {
+          console.error('Load admin memory count today error:', error);
+          return;
+        }
+
+        const countToday = count || 0;
+        setAdminMemoryCountToday(countToday);
+        setCanSendToday(countToday < 1); // Can send if count is less than 1
+      }
+    } catch (error) {
+      console.error('Load admin memory count today error:', error);
+    }
+  }
+
   async function handleSendMemory() {
     if (isSending) return;
 
@@ -88,10 +135,17 @@ export function SendMemory() {
       const result = await response.json();
 
       if (result.success) {
-        // Reload client memory count after sending
+        // Reload counts after sending
         await loadClientMemoryCount();
+        await loadAdminMemoryCountToday();
+        showToast('Đã gửi năng lượng thành công! ✨', 'success');
+      } else {
+        if (result.limitReached) {
+          showToast(result.error || 'Bạn đã gửi năng lượng hôm nay rồi. Hãy đợi đến ngày mai nhé!', 'error');
+          await loadAdminMemoryCountToday(); // Refresh count
       } else {
         showToast('Gửi thất bại: ' + (result.error || 'Unknown error'), 'error');
+        }
       }
     } catch (error) {
       console.error('Send memory error:', error);
@@ -106,12 +160,18 @@ export function SendMemory() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="bg-gradient-to-br from-romantic-soft/50 to-romantic-light/30 rounded-2xl p-6 border border-romantic-glow/30 backdrop-blur-sm shadow-lg">
       <div className="flex items-center justify-between mb-4">
-
+        <div className="space-y-1">
         {clientMemoryCount > 0 && (
           <div className="text-romantic-glow/80 text-sm">
-            Cậu ấy đã nhớ: <span className="font-medium">{clientMemoryCount}</span> lần
+              Cậu ấy đã gửi năng lượng: <span className="font-medium">{clientMemoryCount}</span> lần
+            </div>
+          )}
+          {adminMemoryCountToday > 0 && (
+            <div className="text-romantic-glow/60 text-xs">
+              Bạn đã gửi hôm nay: <span className="font-medium">{adminMemoryCountToday}/1</span>
           </div>
         )}
+        </div>
       </div>
 
 
@@ -119,7 +179,7 @@ export function SendMemory() {
       <div className="w-full">
         <button
           onClick={handleSendMemory}
-          disabled={isSending}
+          disabled={isSending || !canSendToday}
           className="relative w-full py-5 bg-gradient-to-r from-romantic-accent via-romantic-glow to-romantic-accent rounded-2xl text-white font-medium text-lg overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-xl hover:shadow-romantic-glow/30 flex items-center justify-center gap-2"
           style={{
             backgroundSize: '200% 200%',
@@ -136,7 +196,11 @@ export function SendMemory() {
             // Normal label
             <div className="flex items-center gap-2">
               <span className="text-2xl">✨</span>
-              <span>Gửi {"Nhớ"}</span>
+              <span>
+                {canSendToday 
+                  ? 'Gửi năng lượng' 
+                  : 'Đã gửi hôm nay (1/1)'}
+              </span>
             </div>
           )}
         </button>

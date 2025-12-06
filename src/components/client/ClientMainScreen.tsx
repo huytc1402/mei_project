@@ -10,6 +10,8 @@ import { ResponseBox } from './ResponseBox';
 import { MemoryButton } from './MemoryButton';
 import { ResponseHistoryView } from './ResponseHistoryView';
 import { NotificationPopup } from '@/components/NotificationPopup';
+import { PrivacyNotice } from './PrivacyNotice';
+import { UserPreferences } from './UserPreferences';
 
 interface ClientMainScreenProps {
   userId: string;
@@ -269,7 +271,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             
             // Show popup notification
             setNotificationType('memory');
-            setNotificationMessage('✨ Tớ nhớ cậu');
+            setNotificationMessage('✨ Có năng lượng mới');
             setShowNotificationPopup(true);
           }
         }
@@ -379,14 +381,14 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
         const registration = await navigator.serviceWorker.ready;
-        await registration.showNotification('✨ Tớ nhớ cậu', {
-          body: 'Tớ vừa nhấn "Nhớ" cho cậu đấy 💕',
+        await registration.showNotification('✨ Có năng lượng mới', {
+          body: 'Có năng lượng mới từ bạn ✨',
           icon: '/icon-192x192.png',
           badge: '/icon-192x192.png',
           tag: 'admin-memory',
           requireInteraction: false,
-          // @ts-expect-error: 'vibrate' is not in NotificationOptions type but works in browsers supporting it
-          vibrate: [200, 100, 200],
+          silent: true, // Silent notification - no sound, no vibrate
+          // Removed vibrate completely
         });
       } catch (error) {
         console.error('Notification error:', error);
@@ -593,7 +595,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
   }
 
   return (
-    <div className={`h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light relative overflow-hidden flex flex-col transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`}>
+      <div className={`h-screen bg-gradient-to-br from-romantic-dark via-romantic-soft to-romantic-light relative overflow-hidden flex flex-col transition-all duration-1000 ${glowEffect ? 'animate-glow-pulse' : ''}`} style={{ overflow: 'hidden' }}>
       {/* Magical glow overlay effect */}
       {glowEffect && (
         <div className="fixed inset-0 pointer-events-none z-[9999] dreamy-glow">
@@ -670,22 +672,26 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             userId={userId}
           />
 
-          {/* Admin memory count and History button */}
+          {/* Right side: Memory count, Settings icons, History */}
           <div className="flex items-center gap-2">
             {/* Admin Memory Count with Click to Show Info */}
             <div className="relative" ref={tooltipRef}>
               <button
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-romantic-soft/40 backdrop-blur-sm rounded-lg border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors active:scale-95"
+                className="w-9 h-9 bg-romantic-soft/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors relative"
                 onClick={() => setShowMemoryTooltip(!showMemoryTooltip)}
+                title="Năng lượng đã nhận"
               >
-                <span className="text-base sm:text-lg">✨</span>
-                <span className="text-white text-xs sm:text-sm font-medium">{adminMemoryCount}</span>
-               
+                <span className="text-lg">✨</span>
+                {adminMemoryCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 bg-romantic-accent rounded-full text-[10px] font-bold text-white">
+                    {adminMemoryCount > 99 ? '99+' : adminMemoryCount}
+                  </span>
+                )}
               </button>
               {showMemoryTooltip && (
                 <div className="absolute top-full right-0 mt-2 w-56 bg-romantic-dark/95 backdrop-blur-md rounded-lg p-3 border border-romantic-glow/30 shadow-xl z-50 animate-fade-in">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-romantic-glow/80 text-xs font-medium">Thông tin</span>
+                    <span className="text-romantic-glow/80 text-xs font-medium">Năng lượng</span>
                     <button
                       onClick={() => setShowMemoryTooltip(false)}
                       className="text-romantic-glow/60 hover:text-romantic-glow text-xs ml-auto"
@@ -694,33 +700,39 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
                     </button>
                   </div>
                   <p className="text-white text-xs leading-relaxed">
-                    Cậu ấy đã gửi {"Nhớ"} cho bạn 💕
+                    Cậu ấy đã gửi năng lượng cho bạn ✨
                   </p>
                 </div>
               )}
             </div>
 
+            {/* Privacy Notice - Compact icon */}
+            <PrivacyNotice />
+
+            {/* User Preferences - Compact icon */}
+            <UserPreferences userId={userId} />
+
             {/* History button */}
             <button
               onClick={handleViewHistory}
-              className="w-10 h-10 bg-romantic-soft/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors"
+              className="w-9 h-9 bg-romantic-soft/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-romantic-glow/30 hover:bg-romantic-soft/60 transition-colors"
               title="Xem lại phản hồi"
             >
-              <span className="text-xl">📦</span>
+              <span className="text-lg">📦</span>
             </button>
           </div>
         </div>
 
-        {/* Main content area - centered and compact */}
-        <div className="flex-1 flex flex-col justify-center space-y-2 sm:space-y-3 min-h-0 overflow-y-auto">
-          {/* AI Message - The star of the show */}
+        {/* Main content area - centered and compact - NO SCROLL */}
+        <div className="flex-1 flex flex-col justify-center space-y-2 sm:space-y-3 min-h-0 overflow-hidden">
+          {/* AI Message - Scrollable box */}
           {currentMessage && (
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 w-full">
               <AIMessage message={currentMessage} />
             </div>
           )}
 
-          {/* Response Box */}
+          {/* Response Box - Fixed */}
           {currentMessage && (
             <div className="flex-shrink-0">
               <ResponseBox
@@ -736,7 +748,7 @@ export function ClientMainScreen({ userId }: ClientMainScreenProps) {
             </div>
           )}
 
-          {/* Memory Button - In layout flow */}
+          {/* Memory Button - Fixed */}
           {currentMessage && (
             <div className="flex-shrink-0 py-2">
               <MemoryButton

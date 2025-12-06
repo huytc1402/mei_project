@@ -313,7 +313,7 @@ export function HistoryView({ data }: HistoryViewProps) {
                 : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
               }`}
           >
-            Nhớ
+            Năng lượng
           </button>
 
           {/* Date Filter - Icon only */}
@@ -449,7 +449,7 @@ export function HistoryView({ data }: HistoryViewProps) {
                           <span className="text-3xl">✨</span>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="text-white text-sm">Đã nhấn Nhớ</p>
+                              <p className="text-white text-sm">Đã gửi năng lượng</p>
                               {(item as Memory & { itemType: 'memory' }).senderRole && (
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${(item as Memory & { itemType: 'memory' }).senderRole === 'admin'
                                     ? 'bg-romantic-glow/30 text-romantic-glow border border-romantic-glow/50'

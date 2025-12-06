@@ -1,0 +1,61 @@
+﻿📋 DANH SÁCH VIỆC CẦN LÀM (TO-DO LIST)
+1. ⚠️ ĐIỀU CHỈNH TÍNH NĂNG (FEATURE ADJUSTMENTS)
+	Chi tiết công việc
+	1.0 Định hướng Ứng dụng
+		Chuyển hướng ứng dụng từ "Couple App" (Ứng dụng cặp đôi) sang "Companion App" (Ứng dụng đồng hành/chữa lành).
+	1.1 Tin nhắn AI hàng ngày
+		Kỹ thuật Prompting và Nội dung:
+		Rework Prompt Engineering cho Gemini, chuyển tone từ "Romantic" sang "Supportive/Witty Friend".
+		Thiết lập vai trò AI là "người bạn thân, hóm hỉnh, và luôn hỗ trợ".
+		Đảm bảo tin nhắn TUYỆT ĐỐI KHÔNG sử dụng ngôn ngữ lãng mạn (nhớ nhung, yêu thương, trái tim...).
+		Mỗi tin nhắn phải bao gồm 4-5 nội dung được chọn NGẪU NHIÊN từ danh sách sau:
+			* BẮT BUỘC: Dự báo Thời tiết & Lời nhắc Hữu ích.
+			* Câu Quote Động lực.
+			* Horoscope Vui vẻ, Fun Fact thú vị, Quick Life Hack.
+			* Thử thách Mini, Đề xuất Giải trí, Gợi ý Ăn uống Nhanh.
+			* Văn hóa Pop Tóm tắt, Lịch sử Hôm nay (Fun), Từ Vựng Độc Lạ/Ngôn Ngữ Gen Z.
+			* Phá Vỡ Định Kiến Vớ Vẩn, Mục Tiêu Nhỏ Cho Ngày Mai, Cung Cấp Một 'Reason to Smile'.
+			* Kiến Thức Tài Chính (Fun), Tài Liệu Hữu Ích Cần Lưu Lại, Câu Đố Nhanh/Tricky Question.
+			* Đảm bảo mỗi mục nội dung có giọng điệu riêng, kết hợp sự quan tâm với sự hóm hỉnh/mỉa mai nhẹ nhàng.
+	1.2 Nút "Nhớ" & Thông báo
+		Đổi tên nút "Nhớ" thành nút "Gửi năng lượng" hoặc "Cheer up".
+		Thiết lập giới hạn sử dụng cứng (Hard limit) ở Backend: Tối đa 1 lần/ngày cho Admin.
+		Thay đổi cơ chế thông báo thành Silent Notification (chấm đỏ nhỏ hoặc icon thay đổi nhẹ nhàng).
+		Loại bỏ hiệu ứng rung hoặc Popup chiếm màn hình.
+	1.3 Quyền riêng tư & Bảo mật
+		Nới lỏng bảo mật, cho phép đăng nhập lại dễ dàng nếu người dùng đổi điện thoại.
+		Hiển thị RÕ RÀNG (Transparent) rằng ứng dụng KHÔNG theo dõi vị trí (Location) của Client.
+	
+	2. 🛠️ BỔ SUNG VỀ KIẾN TRÚC HỆ THỐNG (TECHNICAL ADDITIONS)
+	Chi tiết công việc
+	2.1 Offline-First Strategy
+		Sử dụng Serwist (thay cho next-pwa) để quản lý Service Worker tốt hơn.
+		Cache lại tin nhắn của ngày hôm qua để hiển thị ngay lập tức (Áp dụng chiến lược Stale-while-revalidate).
+	2.2 Tối ưu chi phí Gemini API
+		Lưu trữ kết quả embedding của các câu trả lời Quick Reply phổ biến vào Supabase (pgvector).
+		Tránh gọi AI mỗi lần tạo gợi ý trả lời bằng cách tái sử dụng embedding đã lưu.
+	2.3 Xử lý Ảnh/Media
+		Triển khai Supabase Storage với CDN caching mạnh để tối ưu tốc độ load ảnh.
+
+	3. 🚀 PHÁT TRIỂN TÍNH NĂNG MỚI (NEW FEATURE DEVELOPMENT)
+	Chi tiết công việc
+	3.1 Tính năng "Chia sẻ nhạc"
+		Tích hợp Spotify Integration.
+		Phát triển giao diện Mini Player trong ứng dụng để phát link Spotify do Admin gửi.
+		Đính kèm link nhạc với lời nhắn nhẹ nhàng, không tình cảm (ví dụ: "Bài này giai điệu hay, hợp làm việc nè").
+	3.2 Mini-game "Hai người"
+		Tích hợp một trò chơi đơn giản, bất đồng bộ (Asynchronous) (ví dụ: Wordle hoặc nuôi thú ảo chung).
+		Cơ chế chơi: Admin chơi xong, gửi kết quả; người dùng chơi khi rảnh.
+	3.3
+	"Hộp thư cảm xúc" (Journaling)
+		Cho phép người dùng viết nhật ký riêng tư (Private Journal).
+		Đảm bảo tính năng Mã hóa ở Client side để ngay cả Admin (bạn) cũng không đọc được nội dung.
+		Tính năng AI: AI đọc nhật ký (chỉ khi người dùng cho phép) và đưa ra lời khuyên hoặc an ủi vào ngày hôm sau.
+	________________
+📝 NGUYÊN TẮC VÀ LỜI KHUYÊN CUỐI CÙNG (GENERAL PRINCIPLES)
+* Triết lý: "Tặng quà là để người nhận vui, không phải để người tặng thỏa mãn cảm giác được cho đi."
+* Mục tiêu: Chỉnh sửa hệ thống để nó trở thành một "Góc bình yên" và nơi trú ẩn an toàn cho người nhận.
+* Hành động tổng thể:
+   * Giảm thiểu thông báo.
+   * Nội dung nhẹ nhàng hơn.
+   * Không đòi hỏi phản hồi: Loại bỏ hoặc không chăm chăm nhìn vào tính năng Admin xem người dùng đã "seen" hay chưa.

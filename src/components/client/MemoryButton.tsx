@@ -62,7 +62,7 @@ export const MemoryButton = memo(function MemoryButton({ onMemory }: MemoryButto
         {/* Normal label */}
         {!isSending && (
           <span className="relative z-10 flex items-center justify-center">
-            Nhớ Cậu
+            Gửi năng lượng
           </span>
         )}
       </button>

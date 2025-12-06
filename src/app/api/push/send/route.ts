@@ -23,24 +23,26 @@ export async function POST(request: NextRequest) {
     switch (type) {
       case 'memory-from-admin':
         payload = {
-          title: '✨ Cậu ấy đã nhớ đến bạn!',
-          body: 'Cậu ấy vừa nhấn nút Nhớ. Hãy mở app để xem!',
+          title: '✨ Có năng lượng mới',
+          body: 'Có năng lượng mới từ bạn ✨',
           icon: '/icon-192x192.png',
+          badge: '/icon-192x192.png',
           tag: 'memory-from-admin',
           data: {
             url: '/client',
             type: 'memory',
+            silent: true,
           },
           requireInteraction: false,
-          vibrate: [200, 100, 200],
+          silent: true, // Silent notification - no sound, no vibrate
         };
         notificationType = 'memory';
         break;
 
       case 'memory-from-client':
         payload = {
-          title: '✨ Cậu ấy đã nhấn Nhớ!',
-          body: 'Cậu ấy vừa nhấn nút Nhớ cho bạn.',
+          title: '✨ Cậu ấy đã gửi năng lượng!',
+          body: 'Cậu ấy vừa gửi năng lượng cho bạn.',
           icon: '/icon-192x192.png',
           tag: 'memory-from-client',
           data: {
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
             type: 'memory',
           },
           requireInteraction: false,
-          vibrate: [200, 100, 200],
+          vibrate: [200, 100, 200], // Admin can still get normal notifications
         };
         notificationType = 'memory';
         break;

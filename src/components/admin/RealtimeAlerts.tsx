@@ -86,7 +86,7 @@ export function RealtimeAlerts({ data }: RealtimeAlertsProps) {
                 <span className="text-4xl">✨</span>
                 <div className="flex-1">
                   <p className="text-romantic-glow/80 text-sm">
-                    Cậu ấy đã nhấn Nhớ
+                    Cậu ấy đã gửi năng lượng
                   </p>
                   <p className="text-romantic-glow/60 text-xs mt-1">
                     {formatDate(latestMemory.createdAt)}

@@ -116,7 +116,7 @@ const HistoryItemComponent = memo(({ item, expandedMessages, onToggleExpand }: {
           <span className="text-3xl">✨</span>
           <div className="flex-1">
             <p className="text-white text-sm">
-              {item.senderRole === 'client' ? 'Bạn đã nhấn "Nhớ"' : 'Đã nhận "Nhớ" từ Cậu ấy'}
+              {item.senderRole === 'client' ? 'Bạn đã gửi năng lượng' : 'Đã nhận năng lượng từ Cậu ấy'}
             </p>
             <p className="text-romantic-glow/60 text-xs">
               {formatDate(item.createdAt)}
@@ -596,7 +596,7 @@ export function ResponseHistoryView({ userId, onBack, cachedHistory, onHistoryLo
                       : 'bg-romantic-soft/50 text-romantic-glow/60 hover:text-romantic-glow'
                   }`}
                 >
-                  Nhớ
+                  Năng lượng
                 </button>
               </div>
               

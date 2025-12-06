@@ -1,41 +1,56 @@
 import { AIService } from './ai.service';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { TelegramService } from './telegram.service';
+import { PushNotificationService } from './push-notification.service';
 
 export class NotificationService {
   private supabase = createAdminClient();
   private aiService = new AIService();
   private telegramService = new TelegramService();
+  private pushService = new PushNotificationService();
 
   async sendDailyNotification(userId: string): Promise<void> {
     try {
+      // Get user preferences (city, horoscope) for AI personalization
+      const { data: userPreferences } = await this.supabase
+        .from('user_preferences')
+        .select('city, horoscope')
+        .eq('user_id', userId)
+        .maybeSingle();
+
       // Get user's recent activity
       const { data: reactions } = await this.supabase
         .from('reactions')
-        .select('*')
+        .select('emoji, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       const { data: messages } = await this.supabase
         .from('messages')
-        .select('*')
+        .select('content, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const { data: memories } = await this.supabase
+        .from('memories')
+        .select('created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      const { data: memories } = await this.supabase
-        .from('memories')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      // Extract user preferences
+      const userCity = (userPreferences as any)?.city || undefined;
+      const userHoroscope = (userPreferences as any)?.horoscope || undefined;
 
-      // Generate AI message
+      // Generate AI message with user preferences
       const { content, emotionLevel } = await this.aiService.generateDailyMessage(
         reactions || [],
         messages || [],
-        memories || []
+        memories || [],
+        userCity,
+        userHoroscope
       );
 
       // Save notification
@@ -45,10 +60,29 @@ export class NotificationService {
         emotion_level: emotionLevel,
       } as any);
 
-      // Send push notification
-      await this.sendPushNotification(userId, content);
-    } catch (error) {
+      // Send push notification using PushNotificationService
+      const notificationContent = content.length > 100 
+        ? content.substring(0, 100) + '...' 
+        : content;
+      
+      await this.pushService.sendNotification(userId, {
+        title: '✨ Lời nhắn từ tớ',
+        body: notificationContent,
+        icon: '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+        tag: `daily-${new Date().toISOString().split('T')[0]}`,
+        data: {
+          url: '/client',
+          type: 'daily',
+        },
+        requireInteraction: false,
+        silent: false,
+      });
+
+      console.log(`✅ Daily notification sent to user ${userId}`);
+    } catch (error: any) {
       console.error('Notification error:', error);
+      throw error;
     }
   }
 
@@ -125,45 +159,10 @@ export class NotificationService {
     try {
       // The memory is already saved in the database by the API route
       // The client will receive it via Supabase realtime subscription
-      // We can also trigger a push notification if needed
+      // Push notification is handled by the API route that creates the memory
       console.log('Memory notification triggered for user:', userId);
-      
-      // Note: For full push notification support, you would need to:
-      // 1. Store push subscriptions in a table
-      // 2. Use Web Push API with VAPID keys
-      // 3. Send push notification through a push service
-      // For now, the realtime subscription will handle the notification
     } catch (error) {
       console.error('Memory notification error:', error);
-    }
-  }
-
-  private async sendPushNotification(
-    userId: string,
-    content: string
-  ): Promise<void> {
-    // This will be implemented with Web Push API
-    // For now, we'll use a service worker approach
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const notificationOptions: NotificationOptions = {
-          body: content,
-          icon: '/icon-192x192.png',
-          badge: '/icon-192x192.png',
-          tag: 'daily-message',
-          requireInteraction: false,
-        };
-        
-        // Add vibrate if supported
-        if ('vibrate' in navigator) {
-          (notificationOptions as any).vibrate = [200, 100, 200];
-        }
-        
-        await registration.showNotification('✨ Lời nhắn từ tớ', notificationOptions);
-      } catch (error) {
-        console.error('Push notification error:', error);
-      }
     }
   }
 }

@@ -34,13 +34,17 @@ export class AIService {
   async generateDailyMessage(
     previousReactions: Reaction[],
     previousMessages: Message[],
-    recentMemories: Memory[]
+    recentMemories: Memory[],
+    userCity?: string,
+    userHoroscope?: string
   ): Promise<{ content: string; emotionLevel: number }> {
     const systemPrompt = this.buildSystemPrompt();
     const contextPrompt = this.buildContextPrompt(
       previousReactions,
       previousMessages,
-      recentMemories
+      recentMemories,
+      userCity,
+      userHoroscope
     );
 
     try {
@@ -69,9 +73,9 @@ export class AIService {
         statusText: error?.statusText,
       });
       
-      // Return fallback message
+      // Return fallback message - supportive and non-romantic
       return {
-        content: 'Hôm nay tớ nghĩ về cậu nhiều lắm. Mong cậu có một ngày tốt lành.',
+        content: 'Chúc cậu có một ngày tốt lành! Hôm nay sẽ là một ngày tuyệt vời. 💫',
         emotionLevel: 50,
       };
     }
@@ -83,18 +87,22 @@ export class AIService {
   ): Promise<string[]> {
     // Add variety prompts to get different results each time
     const varietyPrompts = [
-      'Tạo các câu trả lời phù hợp, ấm áp, không quá thân mật.',
-      'Hãy tạo những câu trả lời tự nhiên, chân thành, sử dụng ngôn ngữ gần gũi.',
-      'Tạo các câu trả lời ngắn gọn, thể hiện sự quan tâm nhẹ nhàng.',
-      'Hãy tạo những câu trả lời ấm áp, thể hiện sự đồng cảm.',
+      'Tạo các câu trả lời phù hợp, thân thiện, tự nhiên.',
+      'Hãy tạo những câu trả lời ngắn gọn, thoải mái, không tình cảm.',
+      'Tạo các câu trả lời đa dạng, thể hiện sự quan tâm nhẹ nhàng như bạn bè.',
+      'Hãy tạo những câu trả lời tự nhiên, không gây áp lực phản hồi.',
     ];
     
     const randomPrompt = varietyPrompts[Math.floor(Math.random() * varietyPrompts.length)];
     
+    const currentYear = new Date().getFullYear();
     const systemPrompt = `Bạn là một AI hỗ trợ tạo câu trả lời nhanh. 
 Tạo 4-6 câu trả lời ngắn gọn, tự nhiên, sử dụng ngôn xưng "tớ - cậu".
 Mỗi câu không quá 15 từ.
+QUAN TRỌNG: KHÔNG sử dụng ngôn ngữ lãng mạn (nhớ, yêu, trái tim...)
+Tone: Thân thiện, thoải mái như bạn bè, không tình cảm.
 Hãy tạo các câu trả lời đa dạng, không lặp lại.
+Sử dụng ngôn ngữ hiện đại, phù hợp với thời điểm hiện tại (năm ${currentYear}).
 Chỉ trả về danh sách các câu trả lời, mỗi câu một dòng, không đánh số.`;
 
     const userPrompt = `Tin nhắn: "${message}"
@@ -117,50 +125,140 @@ Hãy tạo các câu trả lời khác nhau, đa dạng về cách diễn đạt
         .slice(0, 6);
 
       return replies.length > 0 ? replies : [
-        'Tớ cũng nhớ cậu',
         'Cảm ơn cậu',
         'Tớ ổn, cậu thế nào?',
+        'Hay đấy!',
       ];
     } catch (error) {
       console.error('Quick replies error:', error);
       return [
-        'Tớ cũng nhớ cậu',
         'Cảm ơn cậu',
         'Tớ ổn, cậu thế nào?',
+        'Hay đấy!',
       ];
     }
   }
 
   private buildSystemPrompt(): string {
-    return `Bạn là một AI tình cảm, nhẹ nhàng và tinh tế. 
-Nhiệm vụ của bạn là tạo ra những lời nhắn yêu thương hàng ngày.
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    return `Bạn là một người bạn thân, hóm hỉnh, và luôn hỗ trợ (Supportive/Witty Friend).
+Nhiệm vụ của bạn là gửi một tin nhắn "check-in" hàng ngày. Tin nhắn phải vừa hữu ích, vừa truyền động lực, và vừa mang tính giải trí.
+Tone phải tự nhiên, thoải mái, và hơi "sassy" một chút.
 
-QUY TẮC:
-1. Luôn sử dụng ngôn xưng "tớ - cậu", KHÔNG BAO GIỜ dùng "anh/em"
-2. Tone ấm, nhẹ, gần gũi nhưng không sở hữu, không chiếm hữu
-3. Không dồn dập, không làm đối phương ngột ngạt
-4. Phản ánh cảm xúc từ tương tác hôm qua
-5. Nếu đối phương im lặng → hỏi han êm, không trách móc
-6. Nếu có nhiều tương tác tích cực → tăng cảm xúc nhưng vẫn tinh tế
-7. Nếu có "Nhớ" được gửi → thể hiện sự đồng điệu
+QUY TẮC QUAN TRỌNG:
+1. TUYỆT ĐỐI KHÔNG sử dụng ngôn ngữ lãng mạn (nhớ nhung, yêu thương, trái tim, anh yêu em, nhớ cậu...)
+2. Luôn sử dụng ngôn xưng "tớ - cậu", KHÔNG BAO GIỜ dùng "anh/em"
+3. Tone: Hóm hỉnh, tự nhiên, ấm áp nhưng không tình cảm, không đòi hỏi phản hồi
+4. Mỗi tin nhắn phải bao gồm 4-5 nội dung được chọn NGẪU NHIÊN từ danh sách được cung cấp
+5. Giọng điệu: Kết hợp sự quan tâm với sự hóm hỉnh/mỉa mai nhẹ nhàng của một người bạn thân
+6. Không đòi hỏi phản hồi, không tạo áp lực, không gây cảm giác bị theo dõi
+
+YÊU CẦU VỀ DỮ LIỆU MỚI NHẤT:
+- PHẢI sử dụng kiến thức và thông tin mới nhất hiện có (năm ${currentYear}, tháng ${currentMonth})
+- Ưu tiên các xu hướng, sự kiện, fun facts, và văn hóa pop MỚI NHẤT
+- KHÔNG sử dụng thông tin đã lỗi thời hoặc không còn phù hợp
+- Khi nhắc đến các sự kiện, ngày lễ, xu hướng, hãy sử dụng thông tin cập nhật nhất
+- Sử dụng ngôn ngữ và từ vựng hiện đại, phù hợp với thời điểm hiện tại
+
+MỤC TIÊU: Để người dùng thấy app này hữu ích và vui vẻ, chứ không phải là một "công cụ nhắc nhở rằng có người đang đợi mình".
 
 VÍ DỤ TỐT:
-- "Hôm nay tớ nghĩ về cậu nhiều. Mong cậu có một ngày tốt lành."
-- "Cậu có khỏe không? Tớ mong nghe tin từ cậu."
-- "Tớ biết cậu đang bận, nhưng tớ vẫn ở đây."
+- "Hôm nay trời đẹp đấy, nhớ mang theo áo khoác nếu ra ngoài nhé. Btw, cậu biết không, hôm nay là ngày Quốc tế Cà phê đấy! ☕"
+- "Có một quote hay tớ vừa đọc: 'Progress, not perfection'. Áp dụng vào công việc cũng được đấy cậu ạ."
 
-VÍ DỤ SAI (TRÁNH):
-- "Anh nhớ em quá" (sai ngôn xưng)
-- "Em phải trả lời anh" (quá sở hữu)
-- "Anh yêu em" (quá thân mật, không phù hợp)`;
+VÍ DỤ SAI (TUYỆT ĐỐI TRÁNH):
+- "Tớ nhớ cậu" / "Anh nhớ em" / "Tớ yêu cậu" (ngôn ngữ lãng mạn)
+- "Cậu có nhớ tớ không?" (đòi hỏi phản hồi)
+- "Tớ nghĩ về cậu cả ngày" (quá tình cảm)
+- "Trái tim tớ thuộc về cậu" (ngôn ngữ lãng mạn)`;
   }
 
   private buildContextPrompt(
     reactions: Reaction[],
     messages: Message[],
-    memories: Memory[]
+    memories: Memory[],
+    userCity?: string,
+    userHoroscope?: string
   ): string {
     const today = new Date();
+    
+    // Content types pool - select 4-5 randomly
+    const contentTypes = [
+      'Dự báo Thời tiết & Lời nhắc Hữu ích (BẮT BUỘC)',
+      'Vũ Trụ Boss & Sen',
+      'Góc Thú Cưng Dễ Thương',
+      'Câu Quote Động lực',
+      'Horoscope Vui vẻ',
+      'Fun Fact thú vị',
+      'Quick Life Hack',
+      'Thử thách Mini trong ngày',
+      'Đề xuất Giải trí',
+      'Gợi ý Ăn uống Nhanh',
+      'Văn hóa Pop Tóm tắt',
+      'Lịch sử Hôm nay (Fun)',
+      'Từ Vựng Độc Lạ/Ngôn Ngữ Gen Z',
+      'Fun Fact Động Vật',
+      'Phá Vỡ Định Kiến Vớ Vẩn',
+      'Mục Tiêu Nhỏ Cho Ngày Mai',
+      "Cung Cấp Một 'Reason to Smile'",
+      'Kiến Thức Tài Chính (Fun)',
+      'Tài Liệu Hữu Ích Cần Lưu Lại',
+      'Câu Đố Nhanh/Tricky Question',
+      'Tip Chăm Sóc Thú Cưng',
+      'Bí Kíp Nuôi Boss Khỏe',
+      'Từ vựng mỗi ngày',
+      'Xu hướng Công Nghệ và Thiết Kế',
+      'Điện ảnh & Truyện TTranh, Anime & Manga (Fun)',
+    ];
+
+    // Randomly select 4-5 content types (always include weather)
+    const selectedTypes: string[] = [contentTypes[0]]; // Always include weather
+    const otherTypes = contentTypes.slice(1);
+    
+    // Shuffle and pick 3-4 more
+    const shuffled = otherTypes.sort(() => Math.random() - 0.5);
+    const additionalCount = 3 + Math.floor(Math.random() * 2); // 3 or 4
+    selectedTypes.push(...shuffled.slice(0, additionalCount));
+
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    const currentDate = today.getDate();
+    const dayOfWeek = today.toLocaleDateString('vi-VN', { weekday: 'long' });
+    
+    let context = `THÔNG TIN THỜI GIAN HIỆN TẠI:\n`;
+    context += `- Hôm nay: ${today.toLocaleDateString('vi-VN')} (${dayOfWeek})\n`;
+    context += `- Năm: ${currentYear}\n`;
+    context += `- Tháng: ${currentMonth}\n`;
+    context += `- Ngày: ${currentDate}\n\n`;
+    
+    context += `⚠️ QUAN TRỌNG: Sử dụng kiến thức và thông tin MỚI NHẤT của năm ${currentYear}!\n`;
+    context += `- Ưu tiên các xu hướng, sự kiện, fun facts MỚI NHẤT\n`;
+    context += `- KHÔNG sử dụng thông tin đã lỗi thời\n`;
+    context += `- Sử dụng ngôn ngữ và văn hóa pop hiện đại, phù hợp với thời điểm hiện tại\n\n`;
+    
+    context += `Tạo lời nhắn check-in cho hôm nay.\n\n`;
+
+    context += `THÔNG TIN NGƯỜI DÙNG:\n`;
+    if (userCity) {
+      context += `- Thành phố: ${userCity}\n`;
+    } else {
+      context += `- Thành phố: Không có (bỏ qua phần dự báo thời tiết cụ thể)\n`;
+    }
+    
+    if (userHoroscope) {
+      context += `- Cung hoàng đạo: ${userHoroscope}\n`;
+    } else {
+      context += `- Cung hoàng đạo: Không có (bỏ qua phần horoscope)\n`;
+    }
+
+    context += `\nNỘI DUNG CẦN TẠO (chọn ngẫu nhiên ${selectedTypes.length} mục):\n`;
+    selectedTypes.forEach((type, index) => {
+      context += `${index + 1}. ${type}\n`;
+    });
+
+    // Optional: Add context about recent interactions (but keep it minimal and non-pressure)
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -169,45 +267,17 @@ VÍ DỤ SAI (TRÁNH):
       return date.toDateString() === yesterday.toDateString();
     });
 
-    const yesterdayMessages = messages.filter(m => {
-      const date = new Date(m.createdAt);
-      return date.toDateString() === yesterday.toDateString();
-    });
-
-    const recentMemories = memories.filter(m => {
-      const date = new Date(m.createdAt);
-      return date >= yesterday;
-    });
-
-    let context = `Tạo lời nhắn cho hôm nay (${today.toLocaleDateString('vi-VN')}).\n\n`;
-
-    if (recentMemories.length > 0) {
-      context += `Có ${recentMemories.length} lượt "Nhớ" gần đây → thể hiện sự đồng điệu.\n`;
-    }
-
     if (yesterdayReactions.length > 0) {
-      const positiveEmojis = ['❤️', '😊', '👍', '🔥'];
-      const negativeEmojis = ['🥺', '😢', '😔', '😭'];
-      
-      const hasPositive = yesterdayReactions.some(r => 
-        positiveEmojis.includes(r.emoji)
-      );
-      const hasNegative = yesterdayReactions.some(r => 
-        negativeEmojis.includes(r.emoji)
-      );
-
-      if (hasPositive) {
-        context += `Hôm qua có phản hồi tích cực (❤️, 😊) → tăng cảm xúc ấm hơn 10-15%.\n`;
-      } else if (hasNegative) {
-        context += `Hôm qua có phản hồi buồn (🥺) → dịu lại, an ủi nhẹ.\n`;
-      }
+      context += `\nLƯU Ý: Hôm qua có tương tác tích cực → có thể tham khảo nhưng KHÔNG nhắc trực tiếp, KHÔNG đòi hỏi tiếp tục.\n`;
     }
 
-    if (yesterdayMessages.length === 0 && yesterdayReactions.length === 0) {
-      context += `Hôm qua không có phản hồi → nhắc nhẹ, không trách móc, hỏi han êm.\n`;
-    }
-
-    context += `\nTạo một lời nhắn ngắn gọn (50-100 từ), ấm áp, tự nhiên.`;
+    context += `\nYÊU CẦU CUỐI CÙNG:\n`;
+    context += `- Viết một tin nhắn ngắn gọn (150-250 từ), kết hợp ${selectedTypes.length} nội dung trên một cách tự nhiên\n`;
+    context += `- Tone: Hóm hỉnh, tự nhiên, ấm áp nhưng KHÔNG tình cảm\n`;
+    context += `- TUYỆT ĐỐI KHÔNG dùng từ: nhớ, yêu, trái tim, thuộc về, anh/em\n`;
+    context += `- Mỗi mục nội dung có giọng điệu riêng, kết hợp sự quan tâm với sự hóm hỉnh/mỉa mai nhẹ nhàng\n`;
+    context += `- Không tạo áp lực phản hồi, không đòi hỏi attention\n`;
+    context += `- SỬ DỤNG DỮ LIỆU MỚI NHẤT: Tất cả thông tin, xu hướng, sự kiện phải là thông tin cập nhật nhất của năm ${currentYear}, không sử dụng dữ liệu cũ hoặc lỗi thời`;
 
     return context;
   }

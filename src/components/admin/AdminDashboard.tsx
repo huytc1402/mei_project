@@ -187,7 +187,7 @@ export function AdminDashboard({ userId }: AdminDashboardProps) {
             }));
             // Show popup notification
             setNotificationType('memory');
-            setNotificationMessage('✨ Cậu ấy đã nhấn Nhớ!');
+            setNotificationMessage('✨ Cậu ấy đã gửi năng lượng!');
             setShowNotificationPopup(true);
             // Trigger magical glow effect
             setGlowEffect(true);

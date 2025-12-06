@@ -28,6 +28,36 @@ export async function POST(request: NextRequest) {
 
     const clientUserId = (clientUsers[0] as any).id;
 
+    // HARD LIMIT: Check if admin has already sent memory today (max 1/day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStart = today.toISOString();
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStart = tomorrow.toISOString();
+
+    const { count: todayCount, error: countError } = await supabase
+      .from('memories')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', clientUserId)
+      .eq('sender_role', 'admin')
+      .gte('created_at', todayStart)
+      .lt('created_at', tomorrowStart);
+
+    if (countError) throw countError;
+
+    if ((todayCount || 0) >= 1) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Bạn đã gửi năng lượng hôm nay rồi. Hãy đợi đến ngày mai nhé!',
+          limitReached: true
+        },
+        { status: 429 }
+      );
+    }
+
     // Save admin memory to database
     const { data: memory, error: memoryError } = await supabase
       .from('memories')
@@ -50,24 +80,26 @@ export async function POST(request: NextRequest) {
     const { TelegramService } = await import('@/services/telegram.service');
     const telegramService = new TelegramService();
     await telegramService.sendAlert(
-      `✨ Đã gửi "Nhớ" cho cậu ấy!\n⏰ ${new Date().toLocaleString('vi-VN')}`
+      `✨ Đã gửi năng lượng cho cậu ấy!\n⏰ ${new Date().toLocaleString('vi-VN')}`
     );
 
-    // Send push notification to client
-    // Simple notification: "Tớ nhớ cậu"
+    // Send SILENT push notification to client (no vibrate, no popup - just badge/icon change)
     const { PushNotificationService } = await import('@/services/push-notification.service');
     const pushService = new PushNotificationService();
     await pushService.sendNotification(clientUserId, {
-      title: '✨ Tớ nhớ cậu',
-      body: 'Tớ nhớ cậu 💕',
+      title: '✨ Có tin nhắn mới',
+      body: 'Có năng lượng mới từ bạn ✨',
       icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png',
       tag: `memory-${Date.now()}`, // Format: "memory-timestamp" for rate limiting
       data: {
         url: '/client',
         type: 'memory',
+        silent: true, // Mark as silent
       },
       requireInteraction: false,
-      vibrate: [200, 100, 200],
+      silent: true, // Silent notification - no sound, no vibrate
+      // Remove vibrate completely
     }).catch(err => console.error('Push notification error:', err)); // Fire and forget
 
     return NextResponse.json({

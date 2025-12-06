@@ -45,9 +45,9 @@ export function QuickReplies({ message, onReply }: QuickRepliesProps) {
     } catch (error) {
       console.error('Generate replies error:', error);
       setReplies([
-        'Tớ cũng nhớ cậu',
         'Cảm ơn cậu',
         'Tớ ổn, cậu thế nào?',
+        'Hay đấy!',
       ]);
     } finally {
       setLoading(false);

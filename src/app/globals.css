@@ -285,6 +285,13 @@ html {
   background: rgba(168, 85, 247, 0.5);
 }
 
+@media (max-width: 768px) {
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+
 /* Date filter select dropdown styling - sync with page theme */
 .date-filter-select {
   color: transparent;

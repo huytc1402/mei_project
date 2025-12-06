@@ -48,7 +48,7 @@ export class TelegramService {
   }
 
   async sendMemoryAlert(timestamp: string): Promise<void> {
-    const message = `✨ Cậu ấy đã nhấn "Nhớ" lúc ${timestamp}`;
+    const message = `✨ Cậu ấy đã gửi năng lượng lúc ${timestamp}`;
     await this.sendAlert(message);
   }
 }

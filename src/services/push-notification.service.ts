@@ -18,6 +18,7 @@ interface NotificationPayload {
   data?: any;
   requireInteraction?: boolean;
   vibrate?: number[];
+  silent?: boolean; // Silent notification - no sound, no vibrate
   actions?: Array<{
     action: string;
     title: string;
@@ -175,7 +176,9 @@ export class PushNotificationService {
           url: payload.data?.url || '/',
         },
         requireInteraction: payload.requireInteraction || false,
-        vibrate: payload.vibrate || [200, 100, 200],
+        // If silent is true, don't include vibrate; otherwise use provided or default
+        ...(payload.silent ? {} : { vibrate: payload.vibrate || [200, 100, 200] }),
+        silent: payload.silent || false,
         actions: payload.actions || [],
       });
 

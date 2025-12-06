@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Send Telegram notification to admin
     const telegramService = new TelegramService();
     await telegramService.sendAlert(
-      `✨ Cậu ấy đã nhấn "Nhớ"!\n ⏰ ${new Date().toLocaleString('vi-VN')}`
+      `✨ Cậu ấy đã gửi năng lượng!\n ⏰ ${new Date().toLocaleString('vi-VN')}`
     );
 
     // Send push notification to admin
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     const { PushNotificationService } = await import('@/services/push-notification.service');
     const pushService = new PushNotificationService();
     await pushService.sendNotification(adminUserId, {
-      title: '✨ Cậu ấy đã nhấn Nhớ!',
-      body: 'Cậu ấy vừa nhấn nút Nhớ cho bạn.',
+      title: '✨ Cậu ấy đã gửi năng lượng!',
+      body: 'Cậu ấy vừa gửi năng lượng cho bạn.',
       icon: '/icon-192x192.png',
       tag: `memory-${Date.now()}`, // Format: "memory-timestamp" for rate limiting
       data: {

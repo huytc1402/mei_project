@@ -99,9 +99,13 @@ self.addEventListener('push', function (event) {
     tag: notificationData.tag,
     requireInteraction: notificationData.requireInteraction,
     data: notificationData.data,
-    vibrate: notificationData.vibrate,
-    silent: notificationData.silent,
+    silent: notificationData.silent || false,
   };
+
+  // Only add vibrate if NOT silent
+  if (!notificationOptions.silent && notificationData.vibrate) {
+    notificationOptions.vibrate = notificationData.vibrate;
+  }
 
   // Add actions if available
   if (notificationData.actions && notificationData.actions.length > 0) {

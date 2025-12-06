@@ -109,7 +109,26 @@ export function NotificationScheduler() {
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="bg-romantic-soft/40 rounded-2xl p-6 border border-romantic-light/30">
-      <h2 className="text-xl font-light text-white mb-4">Lịch thông báo hằng ngày</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-light text-white">Lịch thông báo hằng ngày</h2>
+      </div>
+      
+      {/* Info box about cron-job.org */}
+      <div className="mb-6 p-4 bg-romantic-glow/10 border border-romantic-glow/20 rounded-lg">
+        <div className="flex items-start space-x-2">
+          <span className="text-lg">ℹ️</span>
+          <div className="flex-1">
+            <p className="text-sm text-white font-medium mb-1">Cấu hình Cron Job</p>
+            <p className="text-xs text-romantic-glow/70 leading-relaxed">
+              Hệ thống sử dụng cron-job.org để tự động gửi thông báo. 
+              Xem hướng dẫn chi tiết trong file <code className="text-romantic-glow/90">CRON_SETUP_GUIDE.md</code>
+            </p>
+            <p className="text-xs text-romantic-glow/60 mt-2">
+              ⏰ Cron chạy mỗi 5 phút để kiểm tra và gửi thông báo đúng giờ
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-4 mb-6">
         <div className="flex space-x-3">
